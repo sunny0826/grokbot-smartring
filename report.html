@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>视易（VIEWE）ESP32 触摸屏开发板：型号、仓库与工具链上手指南</title>
+<style>
+:root{--bg:#f6f8fb;--surface:#fff;--border:#dde3ec;--text:#1f2937;--muted:#64748b;--accent:#1f6fb2;--good:#0f7a4c;--warn:#936100;--soft:#eef6ff}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:1rem}
+body{margin:0;font-family:"PingFang SC","Microsoft YaHei","Segoe UI",system-ui,sans-serif;background:var(--bg);color:var(--text);line-height:1.75;font-size:16px}
+a{color:var(--accent);text-decoration:none;overflow-wrap:anywhere}a:hover{text-decoration:underline}a:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+.wrap{max-width:1080px;margin:0 auto;padding:2rem 1.25rem 4rem}
+header.hero{padding:.5rem 0 1.4rem;border-bottom:1px solid var(--border);margin-bottom:1.5rem}
+.hero img{width:58px;height:58px;display:block;margin-bottom:.8rem}
+.eyebrow{color:var(--accent);font-size:.85rem;font-weight:600;margin:0 0 .4rem}
+h1{margin:0 0 .7rem;font-size:clamp(1.5rem,4vw,2.05rem);line-height:1.4;letter-spacing:-.02em}
+.meta{color:var(--muted);font-size:.88rem;margin:0}
+.tldr{background:var(--soft);border:1px solid #c9dcf0;border-left:4px solid var(--good);border-radius:12px;padding:1rem 1.2rem;margin-bottom:1.4rem}
+.tldr>p{font-weight:650;color:#173f68;margin:0}
+.tldr ul{margin:.65rem 0 0;padding-left:1.2rem}.tldr li{margin:.4rem 0}
+nav.toc{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1rem 1.2rem;margin-bottom:1.5rem}
+nav.toc h2{margin:0 0 .5rem;font-size:.95rem;color:var(--muted)}nav.toc ol{margin:0;padding-left:1.3rem;columns:2;column-gap:2rem}nav.toc li{break-inside:avoid;margin:.3rem 0}
+h2.section{margin:2.3rem 0 .8rem;font-size:1.35rem;padding-bottom:.4rem;border-bottom:1px solid var(--border);line-height:1.5}
+h3{margin:1.3rem 0 .45rem;font-size:1.08rem;line-height:1.6}
+p{margin:.6rem 0;color:#334155}li{color:#334155}ul,ol{padding-left:1.3rem}li{margin:.4rem 0}
+.lead{font-weight:600;color:#0f172a;background:#edf2f8;border-radius:8px;padding:.6rem .8rem}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:.85rem 1rem;margin:.8rem 0}.card h3{margin:0 0 .4rem}
+.callout{background:#fff8ea;border:1px solid #f0d9a8;border-left:4px solid var(--warn);border-radius:10px;padding:.8rem 1rem;margin:1rem 0}.callout p{margin:.3rem 0}
+.table-wrap{overflow-x:auto;margin:.8rem 0 1.1rem;border:1px solid var(--border);border-radius:10px;background:var(--surface)}
+table{width:100%;border-collapse:collapse;font-size:.9rem;line-height:1.7}
+th,td{padding:.65rem .7rem;border-right:1px solid var(--border);border-bottom:1px solid var(--border);text-align:left;vertical-align:top}
+th:last-child,td:last-child{border-right:0}tbody tr:last-child td,tbody tr:last-child th{border-bottom:0}
+thead th{background:#eef3f9;color:#1e293b;font-weight:650}
+tbody th{font-weight:600;background:#fafbfd}
+.cmp{min-width:980px}.third{min-width:940px}.perf{min-width:820px}.facts{min-width:640px}.cmds{min-width:720px}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.87em;background:#eef3f9;padding:.1em .3em;border-radius:4px;overflow-wrap:anywhere}
+.badge{display:inline-block;font-size:.78rem;padding:.08rem .45rem;border-radius:999px;font-weight:650;white-space:nowrap;margin-bottom:.25rem}
+.trigger{background:#fff1d5;color:#875800}.talk{background:#e3f6ec;color:#0f7048}.model{background:#e6f0fb;color:#1d4f91}
+.flow{font-weight:600;color:#173f68;background:#edf5fd;border-radius:8px;padding:.7rem .9rem}
+.sources{font-size:.9rem}.sources li{margin:.5rem 0}.sources h3{font-size:1rem}
+footer{margin-top:2.5rem;padding-top:1rem;border-top:1px solid var(--border);color:var(--muted);font-size:.85rem}
+@media(max-width:640px){.wrap{padding:1.2rem .9rem 3rem}nav.toc ol{columns:1}h2.section{font-size:1.2rem}.tldr{padding:.9rem 1rem}th,td{padding:.55rem .6rem}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+@media print{body{background:#fff;font-size:11pt}.wrap{max-width:none;padding:0}.table-wrap{overflow:visible;border-radius:0}table{min-width:0!important;font-size:9pt}nav.toc{display:none}a{color:inherit;text-decoration:underline}.card,.tldr{break-inside:avoid}h2,h3{break-after:avoid}}
+
+pre{overflow-x:auto;background:#eef3f9;border:1px solid var(--border);border-radius:8px;padding:.8rem 1rem;line-height:1.6;font-size:.85rem}pre code{padding:0;background:transparent;white-space:pre;overflow-wrap:normal}blockquote{margin:.8rem 0;padding:.6rem 1rem;border-left:4px solid var(--accent);background:var(--surface)}.hero img{object-fit:contain}.model-table{min-width:1180px}
+</style>
+</head>
+<body>
+<main class="wrap">
+<header class="hero">
+
+<p class="eyebrow">ESP32 触摸屏开发资料 · VIEWE / VIEWESMART</p>
+<h1>视易（VIEWE）ESP32 触摸屏开发板：型号、仓库与工具链上手指南</h1>
+<p class="meta">整理于 2026-10-12（上海时间，UTC+8）· 未做硬件实测 · 文中时间均按上海时间记录；版本表另保留官方返回的 UTC 发布日期</p>
+</header>
+<aside class="tldr" id="summary" aria-label="一行结论与要点">
+<p>本文整理的是视易（官方名 VIEWE / 优奕视界，账号 VIEWESMART）的 ESP32 触摸屏开发板资料；官方资料里没找到“视易”这个写法。</p>
+<p>先按规格书型号找到单板仓库，再跑它自带的 Arduino + LVGL 8.4 示例；PlatformIO 现成工程也走 Arduino，ESP-IDF 要按板选版本，MicroPython 需要自己移植。</p>
+<ul>
+<li><b>名字先对齐。</b>搜资料时用 VIEWE、优奕视界或 VIEWESMART；官网、规格书和仓库里都没有“视易”。</li>
+<li><b>规格书能公开读，旧示例地址会失效。</b>用本文逐项表换到每个型号一个仓库，别只认仓库名前半段。</li>
+<li><b>主力是 S3。</b>常见配置为 16 MB Flash + 8 MB Octal PSRAM；P4、C3 和无触摸旋钮另列，不能套同一组设置。</li>
+<li><b>先保留工程版本。</b>VIEWE 示例锁定的版本比最新版旧很多，直接装最新版会遇到 API 不兼容，尤其是 LVGL v8/v9。</li>
+<li><b>可视化工具也要对版本。</b>SquareLine 只有部分单板示例；官方更新记录没有写 LVGL 8.4.0 的支持，销售含该 UI 的产品需要商业许可。</li>
+<li><b>快验先找出厂固件。</b>若目标是先检查屏和触摸，可先查对应仓库的 firmware；35 个 Gitee 仓库里没找到 VIEWE 的 MicroPython 固件、示例或教程。</li>
+</ul>
+</aside>
+<nav class="toc" aria-label="目录">
+<h2>按问题跳读</h2>
+<ol>
+<li><a href="#user-data">用户给的资料</a></li>
+<li><a href="#repos">1 名字和仓库怎么找</a></li>
+<li><a href="#models">2 型号表、仓库分组与价格</a></li>
+<li><a href="#toolchains">3 工具链怎么选、怎么搭</a></li>
+<li><a href="#lvgl-versions">4 LVGL v8/v9 不兼容</a></li>
+<li><a href="#troubleshooting">5 坑和排查</a></li>
+<li><a href="#recommendation">6 和用户推荐相比的实际情况</a></li>
+<li><a href="#related">7 与 Grok Bot 报告的关系</a></li>
+<li><a href="#missing">8 没找到的东西</a></li>
+<li><a href="#sources">9 来源</a></li>
+</ol>
+</nav>
+<section aria-labelledby="user-data">
+<h2 class="section" id="user-data">用户给的资料</h2>
+<p class="lead">下面按型号、工程文件和官方文档逐条对照这段推荐。</p>
+<blockquote>「新手推荐：Arduino IDE+ LVGL + SquareLine Studio（可视化设计）。专业开发：PlatformIO + ESP-IDF + LVGL。快速验证：MicroPython + LVGL。示例在规格书最后一页，https://gitee.com/VIEWESMART/projects，国内资料下载，请对应规格书上的型号。」</blockquote>
+</section>
+<section aria-labelledby="repos">
+<h2 class="section" id="repos">1 名字和仓库怎么找</h2>
+<p class="lead">国内下载从 <a href="https://gitee.com/VIEWESMART/projects">VIEWESMART 的 Gitee 项目页</a>开始；用规格书完整型号确认仓库，旧大仓库地址已失效。</p>
+<p><a href="https://viewedisplay.com/">VIEWE 官网</a>与<a href="https://www.displaywiki.com/zh/support/resource/">技术资源中心</a>使用 VIEWE / 优奕视界。Gitee 和 <a href="https://github.com/VIEWESMART">GitHub 同名账号</a>对应这个品牌，X 帖子中指向 VIEWESMART 的仓库也可作为查找入口。SmartRing-Plus 中文 README 还出现过“微视显（VIEWE）”，这里统一称 VIEWE。</p>
+<p>2026-10-12 07:49（上海时间），<a href="https://gitee.com/api/v5/users/VIEWESMART/repos">Gitee 用户接口</a>返回 35 个仓库；VIEWESMART 是个人账号，不是组织。35 个仓库都能公开克隆。GitHub 同名账号有更多仓库，Gitee 用作镜像或同步入口，不能把两边清单视为完全相同。</p>
+<h3>1.1 按这个顺序对型号</h3>
+<ol>
+<li>抄下规格书完整型号，保留 <code>-WB-A</code>、<code>-WB-B</code>、<code>MD80E</code>、<code>MD80ET</code> 等后缀。</li>
+<li>在仓库名里找尺寸与分辨率，如 <code>80480043</code> 或 <code>4.3inch</code>，再看 README 的型号行。</li>
+<li>打开仓库的 <code>information/</code> 或 <code>datasheet/</code>，以规格书 PDF 文件名中的型号为准。两块板分辨率相同，也不能省掉尺寸和版本核对。</li>
+<li>进入该仓库的 <code>examples/</code>。先跑原工程，再替换 UI；若旧 PDF 地址返回 404，按下表找新仓库。</li>
+</ol>
+<p>老款 <code>UEDX…</code> 的读法是对照规格书整理出的总结，<b>不是官方命名规则</b>：常见的 <code>80480</code> 对应 800×480、<code>48270</code> 对应 480×272、<code>24320</code> 对应 240×320；<code>070</code>、<code>043</code> 常对应 7.0、4.3 寸，<code>E</code> 对应 ESP32 系列，<code>-WB-A</code> 常表示 Wi-Fi、蓝牙与 A 版。旋钮常用 <code>-MD50E</code>、<code>-MD80E</code>，末尾 <code>T</code> 区分带触摸版。这套读法有例外，不能替代 PDF 核对。</p>
+<p>只有新款 <a href="https://www.displaywiki.com/zh/products/esp32-s31-4.3inch-800x480-touch-uart-display-hmi/">ESP32-S31 4.3 寸页面</a>给了官方规则：<code>PLCM</code> 是 PCB + 显示模组，<code>UE</code> 是优奕视界智能显示模组，<code>S31</code> 是 ESP32-S31-WROOM-3，<code>S043</code> 是 4.3 英寸，<code>H800V480</code> 是 800×480，<code>C</code> 是 GT911 电容触摸，<code>U</code> 对应 UART / RS485 / I2C / CAN / USB。该新款在这 35 个 Gitee 仓库中没有对应示例。</p>
+<h3>1.2 规格书示例地址：逐项替代</h3>
+<p>14 份官网 PDF 均可公开下载，不需要登录。逐份核对：5 寸、P4 7 寸、P4-Pi、SmartRing-Plus 的链接有效，其余 10 份的示例页指向旧大仓库或旧路径，已失效（先前汇总的数字是 8 份，以下表为准）。请按下表找自己型号的新仓库。</p>
+<p><code>ESP32-Arduino</code>、<code>ESP32-IDF</code>、<code>ESP32-Project</code> 这几个 GitHub 大仓库及 Gitee 同名地址在读取时均为 404。5 寸、P4 7 寸、P4-Pi、SmartRing-Plus 已使用有效的新链接。</p>
+<div class="table-wrap" role="region" aria-label="14 份规格书的示例链接及替代仓库" tabindex="0"><table class="third"><thead><tr><th scope="col">规格书</th><th scope="col">示例页原来写什么</th><th scope="col">读取时状态</th><th scope="col">现在去哪里</th></tr></thead><tbody>
+<tr><td>7 寸 UEDX80480070E v2.0</td><td>5.1 Arduino 示例 <code>ESP32-Arduino/examples/7.0inch/UEDX80480070E-WB-A-Arduino-SDK</code>；5.2 库 <code>…/7.0inch/Libraries</code>；5.3 IDF <code>ESP32-IDF/examples/7.0inch/DX80480070E-WB-A-SDK</code>（全是 github.com/VIEWESMART/ESP32-Arduino、ESP32-IDF 大仓库）</td><td><b>大仓库 404</b>（GitHub 和 Gitee 都是）；改用 UEDX80480070ESP32-7inch-Touch-Display</td><td><a href="https://gitee.com/VIEWESMART/UEDX80480070ESP32-7inch-Touch-Display">UEDX80480070ESP32-7inch-Touch-Display</a></td></tr>
+<tr><td>4.3 寸 800×480 v3.2</td><td>Arduino <code>ESP32-Arduino/examples/UEDX80480043E-WB-A-Arduino-SDK</code>；库 <code>…/4.3inch/libraries</code>；IDF 两个：LVGL v8 的 <code>UEDX80480043E-WB-A-3touch-SDK</code>，LVGL v9 的 <code>UEDX80480043E-WB-A-IDF-SDK</code>（并注明「lvgl is the v8/v9 version」）</td><td>大仓库 404；新仓库 IDF 示例已重做（要 IDF 5.5+）</td><td><a href="https://gitee.com/VIEWESMART/UEDX80480043ESP32-4.3inch-Touch-Display">UEDX80480043ESP32-4.3inch-Touch-Display</a></td></tr>
+<tr><td>4.3 寸 480×272 v2.0</td><td>Arduino 页写「直接在 Arduino 里下载 ESP32_Display_Panel 库用示例」；IDF <code>ESP32-IDF/examples/4.3inch/Low-resolution_480272/UEDX48270043E-WB-A-IDF-SDK</code>（注明 lvgl 是 v9）</td><td>IDF 链接 404</td><td><a href="https://gitee.com/VIEWESMART/UEDX48270043E-ESP32-4.3inch-Touch-Display">UEDX48270043E-ESP32-4.3inch-Touch-Display</a></td></tr>
+<tr><td>4 寸 v3.1</td><td><code>ESP32-Project/UEDX48480040E-WB-A(4.0inch)/examples/Arduino SDK/…</code>、<code>ESP32-IDF/examples/4.0inch/UEDX48480040E-WB-3touch-SDK</code></td><td>大仓库 404</td><td><a href="https://gitee.com/VIEWESMART/UEDX48480040ESP32-4inch-Touch-Display">UEDX48480040ESP32-4inch-Touch-Display</a></td></tr>
+<tr><td>3.5 寸 320×480 v1.0</td><td>Arduino 同样写「下载 ESP32_Display_Panel」；IDF <code>ESP32-IDF/examples/3.5inch/High-resolution_240320/UEDX24_28_35E-WB-A-General-SDK</code>（<b>路径写的是 240320 目录，和 320×480 型号对不上</b>）</td><td>404</td><td><a href="https://gitee.com/VIEWESMART/UEDX24320028ESP32-3.5inch-320_480-Display">UEDX24320028ESP32-3.5inch-320_480-Display</a></td></tr>
+<tr><td>2.4 寸（文件名 v1-0，封面 V1.1）</td><td>同上，IDF <code>ESP32-IDF/examples/2.4inch/UEDX24_28_35E-WB-A-General-SDK</code></td><td>404</td><td><a href="https://gitee.com/VIEWESMART/UEDX24320028ESP32-2.4inch-Touch-Display">UEDX24320028ESP32-2.4inch-Touch-Display</a></td></tr>
+<tr><td>1.9 寸 v3.1</td><td>Arduino <code>ESP32-Arduino/examples/1.9inch/DX17320019E-WB-A-Arduino-SDK</code>；库；IDF 写「enjoy looking forward to」（没有 IDF 示例）</td><td>404</td><td><a href="https://gitee.com/VIEWESMART/UEDX17320019E-ESP32-1.9inch-Touch-Display">UEDX17320019E-ESP32-1.9inch-Touch-Display</a></td></tr>
+<tr><td>2.1 寸旋钮 v3.2、1.3 寸旋钮 v3.2</td><td><code>ESP32-Arduino/examples/UEDX48480021-MD80E-Arduino-SDK</code> 等 + <code>ESP32-IDF/examples/UEDX…-SDK</code></td><td>404</td><td><a href="https://gitee.com/VIEWESMART/UEDX48480021-MD80ESP32_2.1inch-Knob">UEDX48480021-MD80ESP32_2.1inch-Knob</a><br>1.3 寸：<a href="https://gitee.com/VIEWESMART/UEDX24240013-MD50ESP32_1.3inch-Knob">UEDX24240013-MD50ESP32_1.3inch-Knob</a></td></tr>
+<tr><td>1.5 寸 AMOLED v1.1</td><td>4.1/4.2 Arduino 写「We are working hard to adapt it. Please forgive the inconvenience」；4.3 IDF <code>ESP32-Project/UEDX46460015-MD50E/examples/ESP-IDF SDK/…</code></td><td>404</td><td><a href="https://gitee.com/VIEWESMART/UEDX46460015-MD50ESP32-1.5inch-Touch-Knob-Display">UEDX46460015-MD50ESP32-1.5inch-Touch-Knob-Display</a></td></tr>
+<tr><td><b>5 寸 v3.3</b></td><td>5.1 <code>https://github.com/VIEWESMART/UEDX80480050ESP32-5inch-Touch-Display</code>；5.2 <code>…/tree/main/Libraries</code>（同一仓库的 Libraries 目录）</td><td><b>有效</b>，是每个型号一个仓库的新写法，Gitee 有同名镜像</td><td><a href="https://gitee.com/VIEWESMART/UEDX80480050ESP32-5inch-Touch-Display">UEDX80480050ESP32-5inch-Touch-Display</a></td></tr>
+<tr><td>7 寸 P4 v1.2</td><td>最后一页是尺寸图；第 11 页「6. Examples」写 <code>Github:VIEWESMART/7-1024X600-ESP32-P4-C6-TOUCH-DISPLAY</code>、<code>Gitee:VIEWESMART/7-1024X600-ESP32-P4-C6-TOUCH-DISPLAY</code></td><td><b>有效</b>，直接写了 Gitee</td><td><a href="https://gitee.com/VIEWESMART/7-1024X600-ESP32-P4-C6-TOUCH-DISPLAY">7-1024X600-ESP32-P4-C6-TOUCH-DISPLAY</a></td></tr>
+<tr><td>P4-Pi v1.1</td><td>第 10 页「9 Examples」写 <code>https://github.com/VIEWESMART/ESP32-P4-Pi</code> 和 <code>https://gitee.com/VIEWESMART/ESP32-P4-Pi</code></td><td><b>有效</b></td><td><a href="https://gitee.com/VIEWESMART/ESP32-P4-Pi">ESP32-P4-Pi</a></td></tr>
+<tr><td>SmartRing-Plus v1.1（英文）</td><td>最后一页「6. Detailed Information」：GitHub <code>https://github.com/VIEWESMART/SmartRing-Plus</code>、技术支持邮箱、QQ 群</td><td><b>有效</b></td><td><a href="https://gitee.com/VIEWESMART/SmartRing-Plus">SmartRing-Plus</a></td></tr>
+</tbody></table></div>
+<p>P4 7 寸的最后一页是尺寸图，示例在第 11 页；P4-Pi 的示例在第 10 页。旧 1.9 寸 PDF 尚未给 IDF 工程，旧 1.5 寸 PDF 说 Arduino 仍在适配；这些是旧文件的状态，如今单板仓库已列出对应工程。</p>
+<h3>1.3 型号对不上：七处需要再确认</h3>
+<div class="table-wrap" role="region" aria-label="型号不一致的七处问题" tabindex="0"><table class="facts"><thead><tr><th scope="col">序号</th><th scope="col">问题</th><th scope="col">怎么办</th></tr></thead><tbody>
+<tr><td>1</td><td><code>UEDX24320028</code> 被 2.4、2.8、3.5 寸 240×320、3.5 寸 320×480 四个仓库共用。</td><td>实际型号依次为 UEDX24320024E、UEDX24320028E、UEDX24320035E、UEDX32480035E；看尺寸、分辨率和 PDF 文件名。</td></tr>
+<tr><td>2</td><td>4.3 寸 800×480 README 介绍 WB-B，并写 WB-A 将逐步由它替代；官网 PDF 仍是 WB-A v3.2。</td><td>仓库同时有 WB-A V3.2、WB-B V1.0。仓库 README 写着软件上没有区别，但仍先认板子版本，再选驱动和工程；旧 PDF 的 v8/v9 IDF 路径已过期。</td></tr>
+<tr><td>3</td><td>2.1 寸触摸旋钮（MD80ET）、2.1 寸无触摸旋钮（MD80E）、1.3 寸旋钮（MD50E）三个仓库 README 里的商城链接都指向 7 寸产品。</td><td>用本文的产品链接和各自型号核对，不跟错链接选板。</td></tr>
+<tr><td>4</td><td>1.5 寸 AMOLED 的封面写 UEDX46460015-WB-A，图纸写 SFG-UEDX4646015-MD50E，仓库 / Wiki 写 UEDX46460015-MD50E(T)；另一个 Wiki 页面名多了一个 6。</td><td>结合 1.5 寸、466×466、AMOLED、旋钮与触摸后缀确认；不要只用完整字符串搜索。</td></tr>
+<tr><td>5</td><td>7 寸 800×480 规格书写 TN，官网产品页 URL 写 rgb-ips。</td><td>本文保留两种写法，不判定 TN / IPS；选购前请向 VIEWE 确认面板。</td></tr>
+<tr><td>6</td><td>P4 7 寸规格书叫 UEP4S070H1024V600C-WBA；两个仓库叫 7-1024X600-ESP32-P4-C6-TOUCH-DISPLAY、ESP32-P4-SmartDisplay；Wiki 省略 WBA。</td><td>这两个屏仓库对应同内容；ESP32-P4-Ultra 是另一块板，不因示例相近就套用。</td></tr>
+<tr><td>7</td><td>Wiki 有 PLCM-UE…S31… 的新款 4.3 寸 800×480 页面，35 个 Gitee 仓库中没有对应项。</td><td>列为资料空缺，不能用现有 S3 工程宣称已支持 S31。</td></tr>
+</tbody></table></div>
+</section>
+<section aria-labelledby="models">
+<h2 class="section" id="models">2 型号表、仓库分组与价格</h2>
+<p class="lead">先在表里确定芯片、屏接口和触摸 IC，再找示例；同样写“ESP32 触摸屏”，板级初始化也可能完全不同。</p>
+<p>规格书中主力 S3 板通常是 16 MB Flash + 8 MB Octal PSRAM，2.4 GHz Wi-Fi、BLE 5、CH340C USB 转串口与 Type-C。规格书的 <code>RAM: 8MB</code> 指 PSRAM。下面另列 P4 + C6 和 C3，也保留无触摸旋钮、裸开发板作区分。</p>
+<h3>2.1 规格书型号与示例总表</h3>
+<p>宽表可横向滚动。框架一栏只列仓库实际已有的目录；出现 Arduino、ESP-IDF 不代表两者用相同 LVGL API。</p>
+<div class="table-wrap" role="region" aria-label="规格书型号、仓库、芯片、屏和示例" tabindex="0"><table class="model-table"><thead><tr><th scope="col">规格书型号</th><th scope="col">Gitee 仓库</th><th scope="col">芯片</th><th scope="col">屏</th><th scope="col">触摸</th><th scope="col">实际示例</th></tr></thead><tbody>
+<tr><td>UEDX80480070E-WB-A</td><td><a href="https://gitee.com/VIEWESMART/UEDX80480070ESP32-7inch-Touch-Display">UEDX80480070ESP32-7inch-Touch-Display</a></td><td>S3</td><td>7.0&quot; 800×480，规格书写 TN，40PIN RGB 24bit，EK9716BD3+EK73002AB2</td><td>GT911</td><td>Arduino（board/drivers/gui）、PlatformIO（lvgl_v8_port）、ESP-IDF（lvgl_port、sd_card_spi）；<code>firmware/7inch_porting_lvgl.bin</code></td></tr>
+<tr><td>UEDX80480050E-WB-A</td><td><a href="https://gitee.com/VIEWESMART/UEDX80480050ESP32-5inch-Touch-Display">UEDX80480050ESP32-5inch-Touch-Display</a></td><td>S3</td><td>5.0&quot; 800×480 IPS，RGB 24bit，ST7262E43-G4</td><td>GT911</td><td>Arduino、PlatformIO（lvgl_v8_port）、ESP-IDF 4 个（lvgl_v9_demo_5inch、squareline_coffee_5inch、gui_guider_monitoring_5inch、sd_card_spi）；仓库另含 WB-B 规格书</td></tr>
+<tr><td>UEDX80480043E-WB-A（新版 -WB-B）</td><td><a href="https://gitee.com/VIEWESMART/UEDX80480043ESP32-4.3inch-Touch-Display">UEDX80480043ESP32-4.3inch-Touch-Display</a></td><td>S3</td><td>4.3&quot; 800×480，RGB 24bit，ST7262E43-G4</td><td>GT911</td><td>Arduino（lvgl_v8）、PlatformIO（lvgl_v8_port）、ESP-IDF 8 个独立工程（01_i2c_scan … 07_squareline_coffee、08_gui_guider_monitoring），<b>要 IDF 5.5+</b></td></tr>
+<tr><td>UEDX48270043E-WB-A</td><td><a href="https://gitee.com/VIEWESMART/UEDX48270043E-ESP32-4.3inch-Touch-Display">UEDX48270043E-ESP32-4.3inch-Touch-Display</a></td><td>S3</td><td>4.3&quot; 480×272，RGB 24bit，ST7282A</td><td>GT911</td><td>Arduino、PlatformIO（lvgl_v8_port）、ESP-IDF 6 个（01_i2c_scan … 06_album），<b>要 IDF 5.5+</b></td></tr>
+<tr><td>UEDX48480040E-WB-A</td><td><a href="https://gitee.com/VIEWESMART/UEDX48480040ESP32-4inch-Touch-Display">UEDX48480040ESP32-4inch-Touch-Display</a></td><td>S3</td><td>4.0&quot; 480×480，3SPI-RGB 18bit，GC9503V</td><td>FT6336U</td><td>Arduino、PlatformIO、ESP-IDF 6 个（含 06_brookesia_iphone），另有 GETTING_STARTED 文档</td></tr>
+<tr><td>UEDX32480035E-WB-A</td><td><a href="https://gitee.com/VIEWESMART/UEDX24320028ESP32-3.5inch-320_480-Display">UEDX24320028ESP32-3.5inch-320_480-Display</a>（仓库名没跟型号走）</td><td>S3</td><td>3.5&quot; 320×480，MCU 8/16bit/SPI，ST7365P</td><td>CHSC6540</td><td>Arduino、PlatformIO（lvgl_v8_port）、ESP-IDF（PCB_UEDX24320028_SDK、esp32_lvgl_Simulate_IOS）</td></tr>
+<tr><td>UEDX24320035E-WB-A（仓库内规格书 v1.2）</td><td><a href="https://gitee.com/VIEWESMART/UEDX24320028ESP32-3.5inch-240_320-Touch-Display">UEDX24320028ESP32-3.5inch-240_320-Touch-Display</a></td><td>S3</td><td>3.5&quot; 240×320，GC9307</td><td>CHSC6540</td><td>Arduino、PlatformIO、ESP-IDF（PCB_UEDX24320028_SDK）</td></tr>
+<tr><td>UEDX24320028E-WB-A</td><td><a href="https://gitee.com/VIEWESMART/UEDX24320028ESP32-2.8inch-Touch-Display">UEDX24320028ESP32-2.8inch-Touch-Display</a></td><td>S3</td><td>2.8&quot; 240×320，SPI，GC9307（N）</td><td>CHSC6540</td><td>Arduino、PlatformIO、ESP-IDF（PCB_UEDX24320028_SDK）</td></tr>
+<tr><td>UEDX24320024E-WB-A</td><td><a href="https://gitee.com/VIEWESMART/UEDX24320028ESP32-2.4inch-Touch-Display">UEDX24320028ESP32-2.4inch-Touch-Display</a></td><td>S3</td><td>2.4&quot; 240×320，MCU 8/16bit/SPI，GC9307</td><td>CHSC6540</td><td>Arduino、PlatformIO、ESP-IDF（PCB_UEDX24320028_SDK）</td></tr>
+<tr><td>UEDX17320019E-WB-A</td><td><a href="https://gitee.com/VIEWESMART/UEDX17320019E-ESP32-1.9inch-Touch-Display">UEDX17320019E-ESP32-1.9inch-Touch-Display</a></td><td>S3</td><td>1.9&quot; 170×320 IPS，GC9307</td><td>CHSC6413</td><td>Arduino（lvgl_v8_port，用 GFX Library for Arduino）、ESP-IDF；<b>没有 PlatformIO</b></td></tr>
+<tr><td>UEDX48480021-MD80ET（带触摸旋钮）</td><td><a href="https://gitee.com/VIEWESMART/UEDX48480021-MD80ESP32-2.1inch-Touch-Knob-Display">UEDX48480021-MD80ESP32-2.1inch-Touch-Knob-Display</a></td><td>S3</td><td>2.1&quot; 480×480 IPS，ST7701S</td><td>CST826</td><td>Arduino（SquareLinePorting）、PlatformIO（knob21）、ESP-IDF（DX48480021ET-WB-A-LVGL）</td></tr>
+<tr><td>UEDX48480021-MD80E（无触摸）</td><td><a href="https://gitee.com/VIEWESMART/UEDX48480021-MD80ESP32_2.1inch-Knob">UEDX48480021-MD80ESP32_2.1inch-Knob</a></td><td>S3</td><td>2.1&quot; 480×480</td><td>无</td><td>ESP-IDF、SquareLinePorting（Arduino 草图）</td></tr>
+<tr><td>UEDX46460015-MD50ET（规格书封面写 UEDX46460015-WB-A）</td><td><a href="https://gitee.com/VIEWESMART/UEDX46460015-MD50ESP32-1.5inch-Touch-Knob-Display">UEDX46460015-MD50ESP32-1.5inch-Touch-Knob-Display</a>；另有 <a href="https://gitee.com/VIEWESMART/lv_port_viewe_knob_15_espidf">lv_port_viewe_knob_15_espidf</a>、ESPHome 配置仓库</td><td>S3</td><td>1.5&quot; 466×466 AMOLED，QSPI，CO5300AF-42</td><td>CST820（规格书）</td><td>Arduino（simple_port）、PlatformIO（encoder15）、ESP-IDF（UEDX46460015-MD50E-IDF）</td></tr>
+<tr><td>UEDX24240013-MD50E（官网叫 1.28 寸旋钮）</td><td><a href="https://gitee.com/VIEWESMART/UEDX24240013-MD50ESP32_1.3inch-Knob">UEDX24240013-MD50ESP32_1.3inch-Knob</a></td><td><b>C3</b>（160 MHz，400 KB RAM，4 MB Flash）</td><td>1.3&quot; 240×240 IPS</td><td><b>无触摸</b></td><td>Arduino（SquareLinePorting）、PlatformIO（encoder13）、ESP-IDF（UEDX24240013-MD50E-SDK-en）</td></tr>
+<tr><td>UEED32480035E-WB-A（半反半透）</td><td><a href="https://gitee.com/VIEWESMART/UEED32480035ESP32-3.5inch-320_480-Transflective-Display">UEED32480035ESP32-3.5inch-320_480-Transflective-Display</a></td><td>S3</td><td>3.5&quot; 320×480 半反半透，SPI，ST7365</td><td>CHSC6540</td><td>仅 ESP-IDF（UEED_28_lvgl_port）</td></tr>
+<tr><td>UEP4S070H1024V600C-WBA（规格书 7-1024X600 P4 / SmartDisplay）</td><td><a href="https://gitee.com/VIEWESMART/7-1024X600-ESP32-P4-C6-TOUCH-DISPLAY">7-1024X600-ESP32-P4-C6-TOUCH-DISPLAY</a>（<a href="https://gitee.com/VIEWESMART/ESP32-P4-SmartDisplay">ESP32-P4-SmartDisplay</a> 是同内容的另一个仓库；<a href="https://gitee.com/VIEWESMART/ESP32-P4-Ultra">ESP32-P4-Ultra</a> 是另一块小尺寸 P4 板，示例结构类似）</td><td><b>P4 + C6</b>（32 MB PSRAM 封装内，16 MB Flash）</td><td>7.0&quot; 1024×600，MIPI-DSI 2 通道，JD9165BA</td><td>GT911</td><td>Arduino（simple_port）、ESP-IDF 12 个（含 11_7inch_lvgl_demo_v9）</td></tr>
+<tr><td>ESP32-P4-Pi</td><td><a href="https://gitee.com/VIEWESMART/ESP32-P4-Pi">ESP32-P4-Pi</a></td><td>P4 + C6</td><td>不带屏，有 MIPI-DSI 接口，规格书列出 7 寸 1024×600 和 4 寸 720×720 的 MIPI DSI 触摸屏</td><td>看所接屏</td><td>仅 ESP-IDF（08_lvgl_demo_v8、09_lvgl_demo_v9、10_esp_brookesia_phone 等）</td></tr>
+<tr><td>SmartRing-Plus</td><td><a href="https://gitee.com/VIEWESMART/SmartRing-Plus">SmartRing-Plus</a>（早期款见 <a href="https://gitee.com/VIEWESMART/VIEWE-SMARTRING">VIEWE-SMARTRING</a>）</td><td>S3-N16R8</td><td>1.85&quot; 圆形 360×360 IPS</td><td>CST816S</td><td>Arduino（simple_port）、ESP-IDF 11 个（含 04_lvgl_port、11_xiaozhi）</td></tr>
+<tr><td>圆屏 AI 板</td><td><a href="https://gitee.com/VIEWESMART/ESP32-S3-Round-Dev-Board">ESP32-S3-Round-Dev-Board</a>、<a href="https://gitee.com/VIEWESMART/ESP32S3-EMO-Dot">ESP32S3-EMO-Dot</a>、<a href="https://gitee.com/VIEWESMART/VIEWE-ESP32-S3-AI">VIEWE-ESP32-S3-AI</a></td><td>S3</td><td>多款圆屏，规格书列 CO5300AF-42、CO5300、ST77916 等</td><td>CST9217、CST816S</td><td>仅 ESP-IDF，主要是小智（xiaozhi-esp32）固件</td></tr>
+</tbody></table></div>
+<h3>2.2 35 个仓库按用途分组</h3>
+<p>许可证有 MIT、Apache-2.0 等不同写法，用代码前读各仓库 <code>LICENSE</code>；其中 README 模板为 Unlicense。读取时星数最高只有 2，在这个账号上没有社区热度参考价值。SquareLine 导出的 UI 还受其独立许可约束。</p>
+<div class="table-wrap" role="region" aria-label="35 个 Gitee 仓库按用途分组" tabindex="0"><table class="facts"><thead><tr><th scope="col">用途</th><th scope="col">仓库</th><th scope="col">怎么用</th></tr></thead><tbody>
+<tr><th scope="row">硬件板与模块</th><td><ul><li><a href="https://gitee.com/VIEWESMART/7-1024X600-ESP32-P4-C6-TOUCH-DISPLAY">7-1024X600-ESP32-P4-C6-TOUCH-DISPLAY</a></li><li><a href="https://gitee.com/VIEWESMART/ESP32-P4-Core">ESP32-P4-Core</a></li><li><a href="https://gitee.com/VIEWESMART/ESP32-P4-Pi">ESP32-P4-Pi</a></li><li><a href="https://gitee.com/VIEWESMART/ESP32-P4-SmartDisplay">ESP32-P4-SmartDisplay</a></li><li><a href="https://gitee.com/VIEWESMART/ESP32-P4-Ultra">ESP32-P4-Ultra</a></li><li><a href="https://gitee.com/VIEWESMART/ESP32-S3-Round-Dev-Board">ESP32-S3-Round-Dev-Board</a></li><li><a href="https://gitee.com/VIEWESMART/ESP32S3-EMO-Dot">ESP32S3-EMO-Dot</a></li><li><a href="https://gitee.com/VIEWESMART/SmartRing-Plus">SmartRing-Plus</a></li><li><a href="https://gitee.com/VIEWESMART/UEDX17320019E-ESP32-1.9inch-Touch-Display">UEDX17320019E-ESP32-1.9inch-Touch-Display</a></li><li><a href="https://gitee.com/VIEWESMART/UEDX24240013-MD50ESP32_1.3inch-Knob">UEDX24240013-MD50ESP32_1.3inch-Knob</a></li><li><a href="https://gitee.com/VIEWESMART/UEDX24320028ESP32-2.4inch-Touch-Display">UEDX24320028ESP32-2.4inch-Touch-Display</a></li><li><a href="https://gitee.com/VIEWESMART/UEDX24320028ESP32-2.8inch-Touch-Display">UEDX24320028ESP32-2.8inch-Touch-Display</a></li><li><a href="https://gitee.com/VIEWESMART/UEDX24320028ESP32-3.5inch-240_320-Touch-Display">UEDX24320028ESP32-3.5inch-240_320-Touch-Display</a></li><li><a href="https://gitee.com/VIEWESMART/UEDX24320028ESP32-3.5inch-320_480-Display">UEDX24320028ESP32-3.5inch-320_480-Display</a></li><li><a href="https://gitee.com/VIEWESMART/UEDX46460015-MD50ESP32-1.5inch-Touch-Knob-Display">UEDX46460015-MD50ESP32-1.5inch-Touch-Knob-Display</a></li><li><a href="https://gitee.com/VIEWESMART/UEDX48270043E-ESP32-4.3inch-Touch-Display">UEDX48270043E-ESP32-4.3inch-Touch-Display</a></li><li><a href="https://gitee.com/VIEWESMART/UEDX48480021-MD80ESP32-2.1inch-Touch-Knob-Display">UEDX48480021-MD80ESP32-2.1inch-Touch-Knob-Display</a></li><li><a href="https://gitee.com/VIEWESMART/UEDX48480021-MD80ESP32_2.1inch-Knob">UEDX48480021-MD80ESP32_2.1inch-Knob</a></li><li><a href="https://gitee.com/VIEWESMART/UEDX48480040ESP32-4inch-Touch-Display">UEDX48480040ESP32-4inch-Touch-Display</a></li><li><a href="https://gitee.com/VIEWESMART/UEDX80480043ESP32-4.3inch-Touch-Display">UEDX80480043ESP32-4.3inch-Touch-Display</a></li><li><a href="https://gitee.com/VIEWESMART/UEDX80480050ESP32-5inch-Touch-Display">UEDX80480050ESP32-5inch-Touch-Display</a></li><li><a href="https://gitee.com/VIEWESMART/UEDX80480070ESP32-7inch-Touch-Display">UEDX80480070ESP32-7inch-Touch-Display</a></li><li><a href="https://gitee.com/VIEWESMART/UEED32480035ESP32-3.5inch-320_480-Transflective-Display">UEED32480035ESP32-3.5inch-320_480-Transflective-Display</a></li><li><a href="https://gitee.com/VIEWESMART/VIEWE-ESP32-S3-AI">VIEWE-ESP32-S3-AI</a></li><li><a href="https://gitee.com/VIEWESMART/VIEWE-SMARTRING">VIEWE-SMARTRING</a></li></ul></td><td>从规格书和 examples 开始。P4-Core、P4-Ultra、AI 圆屏与主力 S3 屏分开核对。</td></tr>
+<tr><th scope="row">工具、教程、配置与 LVGL 移植</th><td><ul><li><a href="https://gitee.com/VIEWESMART/UEDX46460015-MD50E-ESPHome-config">UEDX46460015-MD50E-ESPHome-config</a></li><li><a href="https://gitee.com/VIEWESMART/VIEWE-FAQ">VIEWE-FAQ</a></li><li><a href="https://gitee.com/VIEWESMART/VIEWE-Tutorial">VIEWE-Tutorial</a></li><li><a href="https://gitee.com/VIEWESMART/Viewe-esp32-components">Viewe-esp32-components</a></li><li><a href="https://gitee.com/VIEWESMART/lv_port_viewe_7_espidf">lv_port_viewe_7_espidf</a></li><li><a href="https://gitee.com/VIEWESMART/lv_port_viewe_knob_15_espidf">lv_port_viewe_knob_15_espidf</a></li></ul></td><td>FAQ / Tutorial 查步骤；components 查 BSP；两个 lv_port 仓库是 LVGL 官方认证移植工程；ESPHome 配置是另一路入口。</td></tr>
+<tr><th scope="row">其他项目、UI 与镜像</th><td><ul><li><a href="https://gitee.com/VIEWESMART/README">README</a></li><li><a href="https://gitee.com/VIEWESMART/esp32-c3-mini">esp32-c3-mini</a></li><li><a href="https://gitee.com/VIEWESMART/windows-10-mobile-lvgl">windows-10-mobile-lvgl</a></li><li><a href="https://gitee.com/VIEWESMART/xiaozhi-esp32">xiaozhi-esp32</a></li></ul></td><td>README 是语法模板；esp32-c3-mini 是别人的非 VIEWE 板 UI；windows-10-mobile-lvgl 是社区适配；xiaozhi-esp32 是固件镜像。</td></tr>
+</tbody></table></div>
+<h3>2.3 供电、亮度与价格</h3>
+<p>规格书写的供电：7 寸、5 寸、两款 4.3 寸为 DC 5V / 300 mA；4 寸 260 mA；2.4 寸、3.5 寸 320×480、1.9 寸 200 mA；1.5 与 1.3 寸旋钮 100 mA；2.1 寸旋钮 1 A；P4 7 寸 450 mA。不要把这些文档值当作本文量过的最大功耗。</p>
+<p>公开规格书的亮度范围为 250–1000 cd/m²，其中 1.5 寸 AMOLED 写 1000 cd/m²；工作温度为 −20～70 ℃。具体板仍以自己的 PDF 为准。</p>
+<p><b>下表是 2026-10-12 的美元现价，会变。</b>链接指向读取过的官网产品页；1.3 寸 C3 旋钮（UEDX24240013-MD50E）官网叫 1.28 寸，价格表里那一行就是它。</p>
+<div class="table-wrap" role="region" aria-label="2026-10-12 官网美元现价" tabindex="0"><table class="facts"><thead><tr><th scope="col">官网产品</th><th scope="col">美元现价</th></tr></thead><tbody>
+<tr><td><a href="https://viewedisplay.com/product/esp32-7-inch-800x480-rgb-ips-tft-display-touch-screen-arduino-lvgl-uart/">7 寸 800×480</a></td><td>$29.90</td></tr>
+<tr><td><a href="https://viewedisplay.com/product/esp32-5-inch-800x480-rgb-ips-tft-display-touch-screen-arduino-lvgl/">5 寸 800×480</a></td><td>$31.90</td></tr>
+<tr><td><a href="https://viewedisplay.com/product/esp32-4-3-inch-800x480-rgb-ips-tft-display-touch-screen-arduino-lvgl/">4.3 寸 800×480</a></td><td>$27.90</td></tr>
+<tr><td><a href="https://viewedisplay.com/product/esp32-4-3-inch-480x272-rgb-ips-tft-display-touch-screen-arduino-lvgl-wifi-ble-uart-smart-module/">4.3 寸 480×272</a></td><td>$15.99</td></tr>
+<tr><td><a href="https://viewedisplay.com/product/esp32-4-inch-tft-display-touch-screen-arduino-lvgl/">4 寸 480×480</a></td><td>$24.90</td></tr>
+<tr><td><a href="https://viewedisplay.com/product/esp32-3-5-inch-320x480-mcu-ips-tft-display-touch-screen-arduino-lvgl-wifi-ble-uart-smart-module/">3.5 寸 320×480</a></td><td>$22.99</td></tr>
+<tr><td><a href="https://viewedisplay.com/product/esp32-2-4-inch-240x320-rgb-ips-tft-display-touch-screen-arduino-lvgl-wifi-ble-uart-smart-module/">2.4 寸</a></td><td>$17.99</td></tr>
+<tr><td><a href="https://viewedisplay.com/product/esp32-2-8-inch-240x320-mcu-ips-tft-display-touch-screen-arduino-lvgl-wifi-ble-uart-smart-module/">2.8 寸 240×320</a></td><td>$17.50</td></tr>
+<tr><td><a href="https://viewedisplay.com/product/esp32-3-5-inch-240x320-mcu-ips-tft-display-touch-screen-arduino-lvgl-wifi-ble-uart-smart-module/">3.5 寸 240×320</a></td><td>$19.90</td></tr>
+<tr><td><a href="https://viewedisplay.com/product/esp32-1-9-inch-170x320-mcu-ips-tft-display-touch-screen-arduino-lvgl/">1.9 寸</a></td><td>$16.99</td></tr>
+<tr><td><a href="https://viewedisplay.com/product/esp32-2-1-inch-480x480-round-tft-knob-touch-display-rotary-encoder-arduino-lvgl/">2.1 寸旋钮</a></td><td>$37.99</td></tr>
+<tr><td><a href="https://viewedisplay.com/product/esp32-1-5-inch-466x466-round-amoled-knob-display-touch-screen-arduino-lvgl/">1.5 寸 AMOLED 旋钮</a></td><td>$34.99</td></tr>
+<tr><td><a href="https://viewedisplay.com/product/esp32-1-28-inch-240x240-round-tft-knob-display-gc9a01-arduino-lvgl/">1.3 寸 C3 旋钮（官网叫 1.28 寸，UEDX24240013-MD50E）</a></td><td>$22.99</td></tr>
+<tr><td><a href="https://viewedisplay.com/product/7-inch-1024x600-esp32-p4-wifi6-touch-smart-hmi-uart-display/">7 寸 P4</a></td><td>$44.99</td></tr>
+<tr><td><a href="https://viewedisplay.com/product/esp32-p4-pi-dev-board-wifi6/">P4-Pi</a></td><td>$17.99</td></tr>
+<tr><td><a href="https://viewedisplay.com/product/smart-ring-plus-esp32-ai-chatbot-1-8-inch-smart-touch-display/">SmartRing-Plus</a></td><td>$35.99</td></tr>
+</tbody></table></div>
+<p>2.8 寸、3.5 寸 240×320 的价格来自官网公开的商品接口（2026-10-12 约 09:02 读取）。官网没有公开这两块板的 PDF，但对应 Gitee 仓库的 <code>information/</code> 有规格书。另外，仓库里的规格书不少比官网新：4 寸 V3.2（官网 v3.1）、1.3 寸 V3.3（官网 v3.2）、1.9 寸 V3.2（官网 v3.1）、1.5 寸 MD50ET V2.0（官网 v1.1）、SmartRing-Plus V2.0（官网 v1.1），2.1 寸触摸旋钮仓库里是 V1.1；上文示例页已指向新仓库，下载后以文件名为准。</p>
+</section>
+<section aria-labelledby="toolchains">
+<h2 class="section" id="toolchains">3 工具链怎么选、怎么搭</h2>
+<p class="lead">希望先跑起来，选 Arduino；想管理现成工程，可用 PlatformIO + Arduino；需要控制驱动、内存与性能，按板采用原生 ESP-IDF。MicroPython 的起步工作最多。</p>
+<div class="table-wrap" role="region" aria-label="三条推荐路线的现成支持" tabindex="0"><table class="facts"><thead><tr><th scope="col">推荐路线</th><th scope="col">现在有什么</th><th scope="col">适合谁</th><th scope="col">先做什么</th></tr></thead><tbody>
+<tr><td>Arduino IDE + LVGL + SquareLine</td><td>Arduino 例程最齐，附 LVGL 8.4；SquareLine 仅部分板有工程。</td><td>第一次点亮屏、验证触摸、学习 UI。</td><td>原例程成功后再导入设计工具输出。</td></tr>
+<tr><td>PlatformIO + ESP-IDF + LVGL</td><td>现成 PlatformIO 工程都走 Arduino，多数用 pioarduino；原生 IDF 工程另有目录。</td><td>需要组件化、调性能，能维护工具链。</td><td>先用现有 IDF 工程及它的版本；若坚持 PlatformIO + IDF，要自行搭配置。</td></tr>
+<tr><td>MicroPython + LVGL</td><td>VIEWE 没有现成工程、固件或教程。</td><td>已有 MicroPython 移植经验，愿意补板级驱动。</td><td>选绑定项目、查 IC 支持、完成板级初始化后才能进入 REPL 改 UI。</td></tr>
+</tbody></table></div>
+<h3>版本快照：读取于 2026-10-12（上海时间）</h3>
+<p>下面“发布日期”保留 GitHub / 官方页返回的日期，<b>GitHub 日期为 UTC 日期，未换算上海日历日</b>。它是版本查找入口，不是所有 VIEWE 板的统一安装清单。</p>
+<div class="table-wrap" role="region" aria-label="工具链版本快照及 UTC 日期" tabindex="0"><table class="facts"><thead><tr><th scope="col">项目</th><th scope="col">读取时版本</th><th scope="col">发布日期</th><th scope="col">官方记录</th></tr></thead><tbody><tr><td>Arduino IDE</td><td>2.3.10</td><td>2026-06-10 01:10（上海时间；GitHub 页面为 2026-06-09 17:10 UTC）</td><td><a href="https://github.com/arduino/arduino-ide/releases/tag/2.3.10">arduino/arduino-ide 2.3.10 发布页</a></td></tr><tr><td>Arduino-ESP32（Espressif 的 Arduino core）</td><td>3.3.12（基于 ESP-IDF v5.5.5）</td><td>2026-09-18</td><td><a href="https://github.com/espressif/arduino-esp32/releases/tag/3.3.12">espressif/arduino-esp32 3.3.12 发布页</a></td></tr><tr><td>LVGL</td><td>v9.6.0</td><td>2026-09-16</td><td><a href="https://github.com/lvgl/lvgl/releases/tag/v9.6.0">lvgl/lvgl v9.6.0 发布页</a></td></tr><tr><td>ESP-IDF</td><td>v6.1</td><td>2026-08-27</td><td><a href="https://github.com/espressif/esp-idf/releases/tag/v6.1">espressif/esp-idf v6.1 发布页</a></td></tr><tr><td>MicroPython</td><td>v1.29.0</td><td>2026-08-24</td><td><a href="https://github.com/micropython/micropython/releases/tag/v1.29.0">micropython/micropython v1.29.0 发布页</a></td></tr><tr><td>PlatformIO platform-espressif32（官方）</td><td>v7.1.3</td><td>2026-09-11</td><td><a href="https://github.com/platformio/platform-espressif32/releases/tag/v7.1.3">platformio/platform-espressif32 v7.1.3 发布页</a></td></tr><tr><td>pioarduino platform-espressif32（Arduino 3.x 的社区分支，VIEWE PlatformIO 示例用它）</td><td>55.03.312-1（Arduino 3.3.12）</td><td>2026-09-22</td><td><a href="https://github.com/pioarduino/platform-espressif32">pioarduino/platform-espressif32 项目页</a></td></tr><tr><td>SquareLine Studio</td><td>1.6.2</td><td>2026-08-10</td><td><a href="https://docs.squareline.io/docs/miscellanos/changelog/">SquareLine 更新记录</a></td></tr></tbody></table></div>
+<div class="callout"><p><b>VIEWE 示例锁定的版本比最新版旧很多，直接装最新版会遇到 API 不兼容。</b>多数 PlatformIO 工程锁 Arduino core 3.1.1、LVGL 8.4.0、pioarduino 53.03.11；IDF 示例的要求分布在 5.1–5.5。先按所选工程保持依赖，再决定升级。</p></div>
+<h3 id="arduino">3.1 Arduino IDE + LVGL</h3>
+<p class="lead">这是 VIEWE 最完整的入门路线：先装该仓库要求的 core 与附带库，选对板宏，再烧录原示例。</p>
+<p>官网多款产品页标题带“Arduino LVGL”，<a href="https://github.com/VIEWESMART/VIEWE-Tutorial">VIEWE 教程 README</a>写 Arduino 适合初学者。Arduino 示例附带 <code>lvgl-release-v8.4</code>，驱动通常是 <code>ESP32_Display_Panel</code>，配合 <code>ESP32_IO_Expander</code>、<code>esp-lib-utils</code>；1.9 寸是例外，用 <code>GFX_Library_for_Arduino</code>。</p>
+<div class="table-wrap" role="region" aria-label="不同仓库的 Arduino core 要求" tabindex="0"><table class="facts"><thead><tr><th scope="col">仓库或文档</th><th scope="col">写明的最低 Arduino core</th><th scope="col">如何处理</th></tr></thead><tbody>
+<tr><td><a href="https://gitee.com/VIEWESMART/UEDX17320019E-ESP32-1.9inch-Touch-Display">1.9 寸</a>、<a href="https://gitee.com/VIEWESMART/UEDX24320028ESP32-3.5inch-240_320-Touch-Display">3.5 寸 240×320</a>、<a href="https://gitee.com/VIEWESMART/UEDX48480021-MD80ESP32-2.1inch-Touch-Knob-Display">2.1 寸触摸旋钮</a>、<a href="https://gitee.com/VIEWESMART/UEDX48480040ESP32-4inch-Touch-Display">4 寸</a></td><td>≥ v3.0.7</td><td>这是这些 README 的要求；同时核对实际装的显示库版本。</td></tr>
+<tr><td><a href="https://gitee.com/VIEWESMART/UEDX24320028ESP32-3.5inch-320_480-Display">3.5 寸 320×480</a></td><td>≥ v3.0.9</td><td>不要因为仓库前缀相同就照另一个 3.5 寸的设置。</td></tr>
+<tr><td><a href="https://gitee.com/VIEWESMART/UEDX24240013-MD50ESP32_1.3inch-Knob">1.3 寸 C3 旋钮</a></td><td>≥ v3.1.0</td><td>芯片是 C3，不用下文 S3 板设置。</td></tr>
+<tr><td><a href="https://github.com/VIEWESMART/VIEWE-FAQ">VIEWE-FAQ 老说明</a></td><td>≥ v3.0.0-alpha3</td><td>它还写开发版索引；新手优先按当前单板 README。</td></tr>
+<tr><td><a href="https://github.com/esp-arduino-libs/ESP32_Display_Panel/blob/master/docs/envs/use_with_arduino_cn.md">ESP32_Display_Panel 官方说明</a></td><td>≥ 3.1.0</td><td>显示库自身要求也要满足，不能只看板仓库旧说明。</td></tr>
+</tbody></table></div>
+<p>对照这些要求后，较稳妥的起点是 3.1.x 以上的 core；这是整理出的选版建议，<b>不是 VIEWE 所有仓库统一规定的版本，也不表示最新版已经验证</b>。显示库 README 有 <code>1.0.3</code> 或 <code>≥1.0.0</code> 的不同要求；先保留对应工程的库组合。</p>
+<ol>
+<li><b>安装 IDE 与开发板包。</b>按 <a href="https://docs.espressif.com/projects/arduino-esp32/en/latest/installing.html">Espressif 安装文档</a>，在“文件 → 首选项 → 其他开发板管理器地址”填下面的稳定版索引，在开发板管理器安装 <code>esp32 by Espressif</code>，按仓库要求选版本。</li>
+</ol>
+<pre><code>https://espressif.github.io/arduino-esp32/package_esp32_index.json</code></pre>
+<p>国内网络可用官方文档提到的镜像索引；2026-10-12（上海时间）读取时该地址可访问，复查遇 429 限速（重试 3 次一样）。它与稳定版索引择一使用：</p>
+<pre><code>https://jihulab.com/esp-mirror/espressif/arduino-esp32/-/raw/gh-pages/package_esp32_index_cn.json</code></pre>
+<p>VIEWE-FAQ 老说明中的 <code>package_esp32_dev_index.json</code> 是开发版索引，不作为本文新手起点。</p>
+<ol start="2">
+<li><b>取得单板工程与库。</b>下载型号表对应仓库，找到 Arduino 工程和 <code>Libraries/</code>；先用随工程附带的 LVGL 8.4。显示库可从 Arduino 库管理器搜索 <code>ESP32_Display_Panel</code>，作者为 esp-arduino-libs；依赖版本以该工程与库 README 为准。</li>
+<li><b>核对开发板设置。</b>下面这套设置来自 4.3 寸 800×480 仓库 issue 的提问者在 2026-04-03 列出的配置。本文未验证；仓库 README 没有把它们集中写成一句话，请对照自己仓库的 README 和截图。它仅可作相应 S3 板的核对起点。</li>
+</ol>
+<div class="table-wrap" role="region" aria-label="4.3 寸 issue 中列出的 S3 Arduino 设置" tabindex="0"><table><thead><tr><th scope="col">菜单项</th><th scope="col">用户列出的设置</th></tr></thead><tbody>
+<tr><td>Board</td><td><code>ESP32S3 Dev Module</code></td></tr>
+<tr><td>Flash Size</td><td><code>16MB</code></td></tr>
+<tr><td>Partition Scheme</td><td><code>16M Flash (3MB APP/9.9MB FATFS)</code></td></tr>
+<tr><td>PSRAM</td><td><code>OPI PSRAM</code></td></tr>
+<tr><td>USB CDC On Boot</td><td>关</td></tr>
+</tbody></table></div>
+<p>出处为 <a href="https://github.com/VIEWESMART/UEDX80480043ESP32-4.3inch-Touch-Display/issues/1">4.3 寸 issue #1</a>。该提问者按上述设置仍遇到背光亮、没有图像；这组设置不是问题已解决的证据。</p>
+<ol start="4">
+<li><b>只启用自己的板宏。</b>按 <a href="https://github.com/esp-arduino-libs/ESP32_Display_Panel">ESP32_Display_Panel</a> 的选板说明，修改 <code>esp_panel_board_supported_conf.h</code>，把 <code>ESP_PANEL_BOARD_DEFAULT_USE_SUPPORTED</code> 设为 1，只打开一个 <code>BOARD_VIEWE_…</code> 宏。下面是 7 寸 WB-A 的例子；其他板从库的 <code>src/board/supported/viewe/</code> 和仓库 README 查自己的宏。</li>
+</ol>
+<pre><code>#define ESP_PANEL_BOARD_DEFAULT_USE_SUPPORTED 1
+#define BOARD_VIEWE_UEDX80480070E_WB_A</code></pre>
+<ol start="5">
+<li><b>让 LVGL 找到配置。</b>保留工程提供的 <code>lv_conf.h</code>。自己补时，从 <code>lv_conf_template.h</code> 复制，改名为 <code>lv_conf.h</code>，把开头 <code>#if 0</code> 改为 <code>#if 1</code>。<a href="https://docs.lvgl.io/master/integration/frameworks/arduino.html">LVGL Arduino 文档</a>给出的库目录放法是放在 <code>libraries/</code> 下、与 <code>lvgl</code> 目录同级；显示库也支持按工程配置放在工程目录。不要同时维护多份不一致的配置。</li>
+<li><b>确认颜色与版本。</b>VIEWE v8 工程通常设 <code>LV_COLOR_DEPTH 16</code>；ESP32_Display_Panel 文档要求 SPI / QSPI 屏设 <code>LV_COLOR_16_SWAP 1</code>。不要把这行机械套到 RGB / MIPI-DSI，或复制到 v9 工程。RGB / MIPI-DSI 可启用 LVGL 防撕裂，库文档要求 LVGL ≥ 8.3.9。</li>
+<li><b>编译并首次烧录。</b>先跑原 Arduino 工程。7 寸 README 写首次烧录按住 <code>BOOT</code> 进入下载模式，BOOT 接 IO0；没有串口时检查 CH340C 驱动和板子的下载模式。烧录后确认图像、颜色、触摸，再改 UI。</li>
+</ol>
+<p>LVGL 的当前 Arduino 文档以 v9.x 为准；它写的显示初始化不能直接放进 VIEWE v8.4 工程。需要 demos 时，文档要求把 <code>lvgl/examples</code>、<code>lvgl/demos</code> 复制进 <code>lvgl/src/</code>，并在配置中启用对应 demo；先按单板现成目录处理，避免混入别的主版本。</p>
+<div class="card"><h3>想先检查硬件</h3><p>先查本板 <code>firmware/</code>。7 寸有 <code>7inch_porting_lvgl.bin</code>；4.3 寸有旧名称的 bin，仓库 CHANGELOG 里 2026-09-14 的条目 说明新旧对应。部分旋钮与 3.5 寸也有固件，<code>tools/</code> 附烧录工具，如 <code>flash_download_tool_3.9.5</code>。认清板与固件对应关系后再用。</p></div>
+
+<h3 id="squareline">3.2 SquareLine Studio</h3>
+<p class="lead">SquareLine 用于设计 UI；先跑通板级工程，再导出匹配 LVGL 版本的 UI。它不会替你完成屏驱动和触摸初始化。</p>
+<p>现成例子：1.3 / 2.1 寸旋钮的 Arduino <code>SquareLinePorting</code>；4.3 寸 IDF 的 <code>07_squareline_coffee</code>；5 寸 IDF 的 <code>squareline_coffee_5inch</code>。GUI Guider 的 <code>gui_guider_monitoring</code> 是另一种工具的示例。<a href="https://github.com/VIEWESMART/VIEWE-Tutorial">VIEWE-Tutorial</a> 的 SquareLine 部分只有标题 / 占位，具体移植步骤要看 <a href="https://github.com/VIEWESMART/VIEWE-FAQ">VIEWE-FAQ</a> 和单板示例。</p>
+<ol>
+<li>在单板仓库找到已有 UI 工程；确认它的 LVGL 主版本，以及是否包含可打开的 SquareLine 工程。</li>
+<li>从 <a href="https://squareline.io/downloads">官方下载页</a>取得 Studio，按 <a href="https://docs.squareline.io/docs/miscellanos/changelog/">更新记录</a>核对版本。下载页本身的版本号未读到；1.6.2 来自更新记录。</li>
+<li>导出时选择与目标工程相符的 LVGL 版本。先保留仓库的屏驱动、触摸与 LVGL port，只替换相应 UI 文件，再编译。</li>
+<li>若目标是 VIEWE 的 v8.4，Studio 中的 8.3.11 是更新记录里较接近的可选版本；官方没有写 8.4.0 的支持，导出后仍须核对 API，不能承诺直接编译。</li>
+</ol>
+<div class="table-wrap" role="region" aria-label="SquareLine 与 VIEWE 的 LVGL 版本衔接" tabindex="0"><table class="facts"><thead><tr><th scope="col">官方记录</th><th scope="col">对 VIEWE 有什么影响</th></tr></thead><tbody>
+<tr><td>Studio 1.6.2，2026-08-10；支持 LVGL 9.5、SVG、Apple 芯片和离线许可。</td><td>有新版本支持，不等于 VIEWE 全部工程可升级到 9.5。</td></tr>
+<tr><td>1.6.0，2026-01-08；加入 LVGL 9.3，移除 LVGL 8.3.6。</td><td>跟旧教程选 8.3.6 会碰到版本缺项；8.3.11 仍保留。</td></tr>
+<tr><td>1.4.0，2024-03-01；加入 LVGL 8.3.11。VIEWE-FAQ 写支持 Studio v1.3.x / v1.4.x 工程。</td><td>VIEWE Arduino 库是 LVGL 8.4.0，官方记录没有写明这个版本的对应支持。</td></tr>
+<tr><td>1.3.2 加入 Flat export；1.3.0 的新导出结构要求 Arduino 项目模板 ≥ v1.1.0。</td><td>移植旧工程时也要检查导出结构与模板版本。</td></tr>
+<tr><td>Open Board Platform 有 arduino_tft_espi、micropython 模板；1.4.1 记录 MicroPython 的 LVGL9 构建支持。</td><td>模板不是 VIEWE 板支持包；不要因此把 VIEWE 默认显示库换成 TFT_eSPI。</td></tr>
+</tbody></table></div>
+<p>上述日期来自官方更新记录的页面日期，页面未给时分；本文不补时分。许可按 <a href="https://squareline.io/pricing/licenses">SquareLine 官方许可页</a>：Personal 免费，最多 10 个屏幕、150 个控件、1 个组件、5 个全局颜色、2 个主题；有 30 天全功能试用，无需注册。Small business、Business 是付费档，价格看官网，本文不写固定价格。<b>销售含该 UI 的产品需要商业许可。</b></p>
+
+<h3 id="platformio">3.3 PlatformIO</h3>
+<p class="lead">现成 PlatformIO 示例可以直接作为起点，但它们走 Arduino，多数用 pioarduino；“PlatformIO + ESP-IDF”没有现成 VIEWE 工程。</p>
+<p>35 个仓库里共有 32 个 <code>platformio.ini</code>，其中 2 个来自非 VIEWE 板的仓库（用 native 和 LVGL 9），不算在内。其余 30 个板级文件里，26 个用 pioarduino 53.03.11 + Arduino core 3.1.1：25 个把 LVGL 锁在 <code>#v8.4.0</code>，1 个（1.3 寸 encoder13）用 <code>release/v8.4</code> 分支；另有 4 个用官方 espressif32 + <code>release/v8.3</code> 或 <code>v8.4</code>。这 26 个里有 3 个是 <code>ESP32_Display_Panel/examples/platformio/</code> 下随库自带的例子，不是单板工程。</p>
+<p><b>一句话：30 个板级 platformio.ini 中 26 个用 pioarduino 53.03.11 + Arduino 3.1.1，LVGL 多为 v8.4.0（1 个用 release/v8.4）；另有 4 个用官方 espressif32 + release/v8.3 或 v8.4。</b>7 寸的关键配置如下，其他型号保留自己的 <code>board</code>：</p>
+<pre><code>platform = https://github.com/pioarduino/platform-espressif32/releases/download/53.03.11/platform-espressif32.zip
+framework = arduino
+board = BOARD_VIEWE_UEDX80480070E_WB_A</code></pre>
+<ol>
+<li>按 <a href="https://docs.platformio.org/en/latest/integration/ide/vscode.html">PlatformIO 的 VS Code 文档</a>安装环境。</li>
+<li>在单板仓库的 PlatformIO 示例中找到 <code>platformio.ini</code>，以这个工程目录打开，保留仓库带的自定义板定义。</li>
+<li>检查 <code>platform</code>、<code>framework</code>、<code>board</code> 与依赖：多数工程的 Arduino core 锁在 <code>3.1.1</code>，LVGL 锁在 <code>lvgl.git#v8.4.0</code>（也有 <code>release/v8.4</code>、<code>release/v8.3</code> 的）。不要先替换为官方平台或未锁版本的库。</li>
+<li>按工程的 <code>lv_conf.h</code> 与显示库设置编译、上传；需要下载模式时按本板 README 操作。1.9 寸仓库没有 PlatformIO 工程，不能照目录名去找。</li>
+</ol>
+<p>官方文档入口：<a href="https://docs.platformio.org/en/latest/platforms/espressif32.html">Espressif32 平台</a>、<a href="https://docs.platformio.org/en/latest/frameworks/arduino.html">Arduino 框架</a>、<a href="https://docs.platformio.org/en/latest/frameworks/espidf.html">ESP-IDF 框架</a>、<a href="https://docs.lvgl.io/master/integration/frameworks/platformio.html">LVGL 集成</a>。LVGL 文档中的 <code>lib_deps = lvgl/lvgl</code> 是通用写法；复现 VIEWE 老工程时继续使用原来的 v8.4.0 锁定项。</p>
+<p>若自行搭 ESP-IDF 工程，配置改为 <code>framework = espidf</code>，工程根目录用 <code>sdkconfig</code>，通过 <code>menuconfig</code> 目标修改。PlatformIO 官方文档写每个平台版本绑定特定 IDF，最新平台支持最新稳定 IDF；先检查所选平台是否满足板上 BSP 的要求。官方板列表没有 VIEWE，官方 platform-espressif32 v7.1.3 与 Arduino-ESP32 3.x 的具体关系未核实。</p>
+<p>VIEWE-Tutorial 的 PlatformIO 部分只有占位：README_CN 第 29 行里 PlatformIO 和 SquareLine 的教程链接是空的 <code>()</code>，目录里也没有对应的教程文件；完整起点是单板仓库里的工程，而不是教程目录的标题。</p>
+
+<h3 id="espidf">3.4 ESP-IDF + LVGL</h3>
+<p class="lead">需要细调驱动、PSRAM 和性能时，用本板的原生 IDF 工程；先确认 README 的 IDF 版本和组件文件的 LVGL 版本。</p>
+<div class="table-wrap" role="region" aria-label="各仓库的 ESP-IDF 版本要求" tabindex="0"><table class="facts"><thead><tr><th scope="col">仓库</th><th scope="col">README 写的 IDF</th><th scope="col">特别要看</th></tr></thead><tbody>
+<tr><td><a href="https://gitee.com/VIEWESMART/UEDX17320019E-ESP32-1.9inch-Touch-Display">1.9 寸</a>、<a href="https://gitee.com/VIEWESMART/UEDX48480021-MD80ESP32-2.1inch-Touch-Knob-Display">2.1 寸旋钮</a>、<a href="https://gitee.com/VIEWESMART/UEDX24320028ESP32-3.5inch-320_480-Display">3.5 寸 320×480</a>、<a href="https://gitee.com/VIEWESMART/VIEWE-SMARTRING">早期 SmartRing</a></td><td>V5.1 / 5.2 / 5.3</td><td>这些是 README 列出的版本，不能理解为任意新版都能用。</td></tr>
+<tr><td><a href="https://gitee.com/VIEWESMART/UEDX24320028ESP32-2.4inch-Touch-Display">2.4 寸</a>、<a href="https://gitee.com/VIEWESMART/UEDX24320028ESP32-2.8inch-Touch-Display">2.8 寸</a>、<a href="https://gitee.com/VIEWESMART/UEDX80480050ESP32-5inch-Touch-Display">5 寸</a>、<a href="https://gitee.com/VIEWESMART/UEDX80480070ESP32-7inch-Touch-Display">7 寸 S3</a>、<a href="https://gitee.com/VIEWESMART/SmartRing-Plus">SmartRing-Plus</a></td><td>v5.3+</td><td>7 寸、2.4 寸、2.8 寸的英文 README 写 v5.3+，中文 README 写 V5.1 / 5.2 / 5.3，以你实际打开的那份为准。仍需看该工程的组件依赖，不能与 Arduino 的 LVGL 8.4 混装。</td></tr>
+<tr><td><a href="https://gitee.com/VIEWESMART/UEDX80480043ESP32-4.3inch-Touch-Display">4.3 寸 800×480</a>、<a href="https://gitee.com/VIEWESMART/UEDX48270043E-ESP32-4.3inch-Touch-Display">4.3 寸 480×272</a></td><td>v5.5+</td><td>新 BSP 要求这个版本；旧规格书中的 IDF 示例地址已过期。</td></tr>
+</tbody></table></div>
+<p>组件文件里也不统一：P4 系列多见 <code>lvgl/lvgl 9.2.*</code>，小智圆屏有 <code>~9.2.2</code>，SmartRing-Plus 小智有 <code>~9.4.0</code>；1.3 寸旋钮与 EMO-Dot 的部分旧工程为 <code>^8</code> / <code>^8.3.0</code>。P4-Pi 同时有 <code>08_lvgl_demo_v8</code> 与 <code>09_lvgl_demo_v9</code>，选一个工程运行。</p>
+<ol>
+<li><b>安装所需 IDF。</b>单板 IDF README 要求 VS Code 的 Espressif ESP-IDF 扩展；4.3 寸中文 README 写通过 EIM 安装。按上述版本表和所选目录的 README 配置环境。</li>
+<li><b>打开一个独立工程。</b>4.3 寸 800×480 有 8 个 IDF 工程，480×272 有 6 个；5 寸有 <code>lvgl_v9_demo_5inch</code>、<code>squareline_coffee_5inch</code>、<code>gui_guider_monitoring_5inch</code>、<code>sd_card_spi</code>。先从扫描 / 基础显示示例开始，再运行 UI。</li>
+<li><b>保留 BSP 与组件版本。</b>4.3 寸新工程使用 ESP 组件注册表的 BSP，800×480 对应 <a href="https://components.espressif.com/components/viewesmart/bsp_uedx80480043_wb_a">viewesmart/bsp_uedx80480043_wb_a</a>，通过 <code>bsp_display_start()</code> 起显示。先检查板上 WB-A / WB-B，不只凭 BSP 名字决定（仓库 README 写着软件上没有区别）。</li>
+<li><b>检查 PSRAM。</b>在 <code>menuconfig → Component config → ESP PSRAM</code> 开 <code>CONFIG_SPIRAM</code>，S3 的模式选 Octal。4.3 寸新示例的 <code>sdkconfig.defaults</code> 已设置 PSRAM、16 MB Flash 与 <code>CONFIG_LV_USE_CLIB_MALLOC</code> 等项目；先保留这些默认项。</li>
+<li><b>编译、烧录并观察日志。</b>用 README 指定的扩展环境操作，按本板下载模式烧录；先确认屏、触摸，再改 LVGL 配置。需要保留的配置写回 <code>sdkconfig.defaults</code>。</li>
+</ol>
+<p>自行新建工程时，<a href="https://docs.lvgl.io/master/integration/chip_vendors/espressif/add_lvgl_to_esp32_idf_project.html">LVGL 官方 IDF 集成文档</a>给出下面的依赖添加方法。<b>现成 VIEWE 工程已有依赖时，不要再加一个不同版本。</b></p>
+<pre><code>idf.py add-dependency "espressif/esp_lvgl_port^2.3.0"
+# 下面是新建 v9 工程的版本约束示例；不是 v8 工程的升级步骤
+idf.py add-dependency "lvgl/lvgl^9.*"
+idf.py menuconfig</code></pre>
+<p><a href="https://components.espressif.com/components/espressif/esp_lvgl_port">esp_lvgl_port</a>同时支持 LVGL 8、9，文档要求 IDF ≥ 4.4；这不降低 VIEWE BSP 的 5.5+ 要求。显示与触摸由 <code>esp_lcd</code>、BSP 中的 <code>esp_lcd_*</code> / <code>esp_lcd_touch_*</code> 组件处理。调用 <code>bsp_display_start()</code> 或 <code>lvgl_port_init()</code> 后，LVGL 在后台任务运行，<b>不用再自己调用 lv_timer_handler()</b>。</p>
+<p>官方说明：<a href="https://docs.espressif.com/projects/esp-idf/en/latest/esp32s3/api-guides/external-ram.html">S3 外部 RAM</a>、<a href="https://docs.espressif.com/projects/esp-idf/en/latest/esp32s3/api-reference/peripherals/lcd/rgb_lcd.html">RGB LCD</a>、<a href="https://components.espressif.com/components/lvgl/lvgl">LVGL 组件</a>、<a href="https://docs.lvgl.io/master/integration/chip_vendors/espressif/tips_and_tricks.html">LVGL ESP32 性能技巧</a>。RGB 帧缓冲可设 <code>fb_in_psram</code>，文档也说明 bounce buffer 和双缓冲防撕裂。</p>
+<div class="table-wrap" role="region" aria-label="IDF 性能与 PSRAM 配置核对" tabindex="0"><table class="facts"><thead><tr><th scope="col">场景</th><th scope="col">官方文档中的选项</th><th scope="col">限制</th></tr></thead><tbody>
+<tr><td>编译与热代码</td><td><code>CONFIG_COMPILER_OPTIMIZATION_PERF=y</code>、<code>CONFIG_LV_ATTRIBUTE_FAST_MEM_USE_IRAM=y</code>；S3 CPU 最高 240 MHz。</td><td>LVGL 文档写编译优化最多约 30% 提升；本文没有在 VIEWE 板上测得这个数字。</td></tr>
+<tr><td>S3 Octal PSRAM</td><td><code>CONFIG_SPIRAM=y</code>、<code>CONFIG_SPIRAM_MODE_HEX=y</code>、<code>CONFIG_SPIRAM_USE=y</code>、<code>CONFIG_SPIRAM_ALLOW_BSS_SEG_EXTERNAL_MEMORY=y</code>、<code>CONFIG_SPIRAM_RODATA=y</code>。</td><td>按本工程 IDF 的菜单确认选项；不是 C3 / P4 的通用配置包。</td></tr>
+<tr><td>文件资源</td><td><code>LV_USE_FS_STDIO</code></td><td>用于所选工程的文件系统资源访问。</td></tr>
+<tr><td>P4 PPA / PSRAM</td><td><code>CONFIG_LV_DRAW_BUF_ALIGN=64</code>；PSRAM 欠载时文档提到 <code>CONFIG_SPIRAM_SPEED_200M=y</code>。</td><td>P4 专项，不能用来设置 S3；仍要对照板与 IDF 支持。</td></tr>
+</tbody></table></div>
+<p>还可看 <a href="https://gitee.com/VIEWESMART/lv_port_viewe_7_espidf">7 寸 LVGL 认证工程</a>和 <a href="https://gitee.com/VIEWESMART/lv_port_viewe_knob_15_espidf">1.5 寸旋钮认证工程</a>；先核对目标板和依赖，再作为移植参考。</p>
+
+<h3 id="micropython">3.5 MicroPython + LVGL：自己搭的起点</h3>
+<p class="lead">还不能把它写成 VIEWE 的现成快速验证路线：没有单板固件、示例、教程，也没有本报告的上板验证。</p>
+<p>35 个仓库中只有 SmartRing-Plus README 一句兼容 MicroPython，以及教程目录中的一张 MicroPython logo；没找到完整开发路径。SmartRing-Plus 带的 ESP32_Display_Panel 1.0.4 有 <code>micropython.cmake</code>、<code>mpy_support</code>，也没有 VIEWE 板使用教程。</p>
+<p><a href="https://micropython.org/download/ESP32_GENERIC_S3/">MicroPython 官方 S3 固件</a>提供 v1.29.0 的 <code>.bin</code> / <code>.app-bin</code> / <code>.uf2</code>，也保留 v1.28.0；它是纯 MicroPython，<b>不含 LVGL 绑定</b>。装好它不等于屏幕可运行 LVGL。</p>
+<ol>
+<li><b>先选绑定项目。</b><a href="https://docs.lvgl.io/master/integration/bindings/micropython.html">LVGL 官方 MicroPython 文档</a>将它用于快速原型：固件和驱动备齐后，在 REPL 改 UI 可省掉反复编译烧录。官方分支是 <a href="https://github.com/lvgl/lv_micropython">lvgl/lv_micropython</a>，README 把用法指向 <code>README-LVGL.md</code>。</li>
+<li><b>若选分叉，按分叉的说明编译。</b><a href="https://github.com/lvgl-micropython/lvgl_micropython">lvgl-micropython/lvgl_micropython</a> 是另一个、主要由个人维护的项目。2026-10-12（上海时间）读取的 README 要求 Python ≥ 3.10，支持 Linux / macOS，Windows 编译标为 <code>not yet supported</code>；不要用官方绑定的构建说明，不要在克隆后手工初始化子模块，要更新则删除后重克隆。这是该项目写的限制，本文未验证它在 VIEWE 板上的构建。</li>
+<li><b>逐一核对屏与触摸 IC。</b>分叉的列表含 GC9A01、ILI9341 / 9488、ST7789、ST7796、SSD1963，ST7701S 标 WIP；触摸含 GT911、CST816S、FT6x36。VIEWE 的 GC9307、CHSC6540、CHSC6413、CST826、CO5300、ST7262 / ST7282、GC9503V、JD9165BA 未找到现成驱动。通用 <code>rgb_display</code> 也不能代替板级初始化。</li>
+<li><b>补板级初始化。</b>S3 的 <code>ESP32_GENERIC_S3</code> + <code>SPIRAM_OCT</code> 能对应 8 MB Octal PSRAM，但还要自己处理引脚、背光、IO 扩展器和触摸复位；VIEWE 没提供这些 Python 初始化。</li>
+<li><b>构建、烧录后才开始交互改 UI。</b>下面仅是分叉 README 的构建形式，屏驱动为 ST7796、输入为 GT911，<b>不是任何 VIEWE 型号的已验证命令</b>。可按该项目说明加 <code>deploy PORT=… BAUD=…</code> 烧录。</li>
+</ol>
+<pre><code>python3 make.py esp32 BOARD=ESP32_GENERIC_S3 BOARD_VARIANT=SPIRAM_OCT DISPLAY=st7796 INDEV=gt911</code></pre>
+<p>该分叉 README 写 MicroPython 只用一个核；RGB 驱动用局部缓冲加第二核搬运，帧缓冲必须在 SPIRAM，绘制缓冲建议约为屏幕的 1/10。以上为 2026-10-12（上海时间）读取的项目说明，本文未验证；不要把它理解为所有框架的统一内存安排。</p>
+<p>该分叉许可证页面显示 Other / NOASSERTION，没有明确 SPDX。SquareLine 有 MicroPython 模板和 LVGL9 导出相关记录，但它与 VIEWE 板的衔接没有资料可照做。</p>
+</section>
+<section aria-labelledby="lvgl-versions">
+<h2 class="section" id="lvgl-versions">4 LVGL v8/v9 不兼容</h2>
+<p class="lead">一个工程只选一个 LVGL 主版本；板级 port、UI 源码、SquareLine 导出必须一起匹配。</p>
+<p><a href="https://docs.lvgl.io/9.0/CHANGELOG.html">LVGL v9 官方变更记录</a>更换了显示接口。VIEWE Arduino / PlatformIO 是 v8.4；4.3 / 5 寸新 IDF UI、小智与 P4 的一些工程是 v9；也有 IDF v8 工程。不能凭“都是 LVGL”混用。</p>
+<div class="table-wrap" role="region" aria-label="LVGL v8 与 v9 的接口差异" tabindex="0"><table class="facts"><thead><tr><th scope="col">核对项</th><th scope="col">v8 工程</th><th scope="col">v9 工程</th><th scope="col">遇到什么就查这里</th></tr></thead><tbody>
+<tr><td>显示类型与初始化</td><td><code>lv_disp_drv_t</code></td><td><code>lv_display_t</code>、<code>lv_display_create()</code>、<code>lv_display_set_flush_cb()</code></td><td>v9 已不存在 <code>lv_disp_drv_t</code>；报未知类型时先查依赖主版本。</td></tr>
+<tr><td>RGB565 换字节</td><td><code>LV_COLOR_16_SWAP</code></td><td><code>LV_COLOR_FORMAT_RGB565_SWAPPED</code></td><td>按 <a href="https://lvgl.io/docs/open/main-modules/display/color_format">官方颜色格式说明</a>处理；别复制旧配置后又手动换一次字节。</td></tr>
+<tr><td>绘制与对象函数</td><td>v8 UI 与 port</td><td>v9 UI 与 port</td><td><a href="https://github.com/espressif/esp-bsp/blob/master/components/esp_lvgl_port/README.md">esp_lvgl_port README</a>说部分函数跨 v8/v9 不兼容；它兼容两版不等于所有 UI 自动兼容。</td></tr>
+<tr><td>可视化导出</td><td>按工程选择 v8 输出</td><td>按工程选择相应 v9 输出</td><td>导出前确认 Studio / Vision 及版本，不只看软件名称。</td></tr>
+</tbody></table></div>
+<p>2.1 寸旋钮仓库的提问者在 2025-09-10（issue 创建日）说，Arduino 示例 UI 是 LVGL 9.1，而 <code>lvgl_port8.h</code> 是 8.4，两边都编不过。本文未复现；这是 <a href="https://github.com/VIEWESMART/UEDX48480021-MD80ESP32-2.1inch-Touch-Knob-Display/issues/4">issue #4</a> 的用户报告，不是该仓库当前所有工程都不能用的结论。</p>
+<p>遇到 <code>lv_disp_drv_t</code> 未定义，先看 <code>idf_component.yml</code>、<code>platformio.ini</code> 或附带库目录中的 LVGL 版本，再查 UI / port。不要仅靠改一个类型名继续编译；v9 的初始化流程也已改变。</p>
+</section>
+<section aria-labelledby="troubleshooting">
+<h2 class="section" id="troubleshooting">5 坑和排查</h2>
+<p class="lead">先查板版本、显示宏、PSRAM 和 LVGL 主版本，再查颜色、缓冲、分区与触摸；“背光亮”不能证明驱动选对。</p>
+<h3>5.1 VIEWE 官方仓库里，用户提的 issue</h3>
+<p>以下是第三方提问者的记录，本文没有复现；VIEWE 回复另写明。表中日期是 issue 创建日，没有时分。关闭只说明工单状态，不能当作修法已经公开。状态读取于 2026-10-12（上海时间）。</p>
+<div class="table-wrap" role="region" aria-label="VIEWE 仓库用户问题、日期与解决情况" tabindex="0"><table class="third"><thead><tr><th scope="col">板 / 创建日</th><th scope="col">谁说了什么（均未验证）</th><th scope="col">解决情况与下一步</th><th scope="col">出处</th></tr></thead><tbody>
+<tr><td>4.3 寸 800×480<br>2026-04-03</td><td>提问者说 Arduino + ESP32_Display_Panel + lvgl_v8，选 WB-A 宏，只有背光、没有图像；未验证。</td><td>未关闭。VIEWESMART 在 2026-04-13 回复会用同型号板测试；没看到最终办法。先核对 WB-A / WB-B、板宏与库，不把该回复当修复。</td><td><a href="https://github.com/VIEWESMART/UEDX80480043ESP32-4.3inch-Touch-Display/issues/1">issue #1</a></td></tr>
+<tr><td>7 寸<br>2025-01-23、2025-02-24</td><td>两位提问者分别报告 PlatformIO 无法编译，以及 Arduino 缺 <code>panel/ESP_Panel.h</code>；后一条用了显示库 1.0.0、IO Expander 1.1.0。未验证。</td><td>未记录最终修复 / 关闭状态。显示库有 <code>ESP_Panel.h</code> 到 <code>esp_display_panel.hpp</code> 的换代，先恢复工程对应库。</td><td><a href="https://github.com/VIEWESMART/UEDX80480070ESP32-7inch-Touch-Display/issues/2">#2</a>、<a href="https://github.com/VIEWESMART/UEDX80480070ESP32-7inch-Touch-Display/issues/3">#3</a></td></tr>
+<tr><td>1.5 寸<br>2025-03-10、2025-08-08、2025-10-13</td><td>相关提问者报告 PlatformIO 示例缺失、编译失败或 <code>esp_display_panel.hpp</code> 找不到；未验证。</td><td>未记录这些工单的最终修复 / 关闭状态。这里列的是一组旧问题；现在型号表已列 PlatformIO 目录，不能继续说“当前完全没有示例”。</td><td><a href="https://github.com/VIEWESMART/UEDX46460015-MD50ESP32-1.5inch-Touch-Knob-Display/issues/12">#12</a>、<a href="https://github.com/VIEWESMART/UEDX46460015-MD50ESP32-1.5inch-Touch-Knob-Display/issues/13">#13</a>、<a href="https://github.com/VIEWESMART/UEDX46460015-MD50ESP32-1.5inch-Touch-Knob-Display/issues/4">#4</a></td></tr>
+<tr><td>2.1 寸<br>2025-10-01</td><td>提问者询问 PlatformIO 示例；未验证。</td><td>未记录最终状态；如今仓库有 <code>knob21</code>。先看当前工程。</td><td><a href="https://github.com/VIEWESMART/UEDX48480021-MD80ESP32-2.1inch-Touch-Knob-Display/issues/6">#6</a></td></tr>
+<tr><td>1.5 寸<br>2026-01-14</td><td>提问者说 PlatformIO 颜色不对，试过 <code>LV_COLOR_16_SWAP</code>、<code>ESP_PANEL_LCD_BGR_ORDER</code>、<code>ESP_PANEL_LCD_INEVRT_COLOR</code> 仍不行；未验证。</td><td>已关闭，提问者回复已弄明白，但没公开办法。不能把“打开换字节”写成此工单的已验证修法。</td><td><a href="https://github.com/VIEWESMART/UEDX46460015-MD50ESP32-1.5inch-Touch-Knob-Display/issues/18">#18</a></td></tr>
+<tr><td>2.1 寸<br>2025-09-10、2025-10-22</td><td>提问者分别报告 v9.1 UI 与 v8.4 port 混用，以及 IDF 5.1.6 / 更高版本报不同错误；未验证。</td><td>未记录最终修复 / 关闭状态。统一 LVGL 主版本，再按本工程依赖检查 IDF。</td><td><a href="https://github.com/VIEWESMART/UEDX48480021-MD80ESP32-2.1inch-Touch-Knob-Display/issues/4">#4</a>、<a href="https://github.com/VIEWESMART/UEDX48480021-MD80ESP32-2.1inch-Touch-Knob-Display/issues/7">#7</a></td></tr>
+<tr><td>1.5 寸<br>2025-10-14</td><td>提问者贴出 Sketch 使用 3146555 字节、最大 3145728 字节，超过默认 3 MB 应用分区；未验证。</td><td>VIEWESMART 回复自定义分区表可解决，并说会修正上传；记录未确认最终上传 / 关闭状态。先看应用分区，不只看 Flash 总容量。</td><td><a href="https://github.com/VIEWESMART/UEDX46460015-MD50ESP32-1.5inch-Touch-Knob-Display/issues/14">#14</a></td></tr>
+<tr><td>1.5 寸<br>2026-02-18</td><td>提问者说画面撕裂、TE 的 GPIO38 没信号，试过多种命令；未验证。</td><td>未关闭，没找到官方解决办法。相关 TE 支持提问也没有记录可用修法；不要承诺 AMOLED 套 RGB 防撕裂就能解决。</td><td><a href="https://github.com/VIEWESMART/UEDX46460015-MD50ESP32-1.5inch-Touch-Knob-Display/issues/23">#23</a>；<a href="https://github.com/VIEWESMART/UEDX46460015-MD50ESP32-1.5inch-Touch-Knob-Display/issues/17">TE 支持 #17（未记录日期）</a></td></tr>
+<tr><td>1.5 寸<br>2025-05-18</td><td>提问者质疑示例手工使用 <code>sh8601</code>，没有使用 <code>co5300</code> 正规 QSPI 配置，难迁移到 LVGL 9+；未验证。</td><td>未记录最终修复 / 关闭状态。先区分实际 IC 与工程里的兼容配置，不据工单断言硬件驱动错误。</td><td><a href="https://github.com/VIEWESMART/UEDX46460015-MD50ESP32-1.5inch-Touch-Knob-Display/issues/6">#6</a></td></tr>
+<tr><td>5 寸<br>2025-08-02</td><td>提问者说日志持续报 <code>esp_task_wdt_reset(): task not found</code>，认为可能在未注册任务中调用；未验证。</td><td>未记录最终修复 / 关闭状态。按该工单与实际库版本查任务注册，不把用户判断当已查明原因。</td><td><a href="https://github.com/VIEWESMART/UEDX80480050ESP32-5inch-Touch-Display/issues/1">#1</a></td></tr>
+<tr><td>4 寸<br>2025-09-24、2025-04-01</td><td>提问者分别报告 SquareLine 示例缺 <code>ui.h</code>、缺 demo 固件；未验证。</td><td><code>ui.h</code> 工单已关闭，但记录没有最终办法；固件工单未记录关闭状态。先查 UI 导出文件是否完整。</td><td><a href="https://github.com/VIEWESMART/UEDX48480040ESP32-4inch-Touch-Display/issues/2">#2</a>、<a href="https://github.com/VIEWESMART/UEDX48480040ESP32-4inch-Touch-Display/issues/1">#1</a></td></tr>
+<tr><td>3.5 寸 320×480<br>2026-03-04</td><td>提问者说规格书第 12 页机械图是 2.4 寸型号的；未验证。</td><td>未关闭。做外壳前确认机械图与实物尺寸，不能只信型号相似的图。</td><td><a href="https://github.com/VIEWESMART/UEDX24320028ESP32-3.5inch-320_480-Display/issues/1">#1</a></td></tr>
+<tr><td>7 寸<br>2026-05-01</td><td>提问者说 README 把触摸 SDA / SCL 与 USB D− / D+ 都写在 IO19 / IO20；又说触摸实际在这两脚可用。未验证。</td><td>未关闭。以对应板版次的电路 / 引脚定义核对，不替作者确认 USB 同时可用。</td><td><a href="https://github.com/VIEWESMART/UEDX80480070ESP32-7inch-Touch-Display/issues/6">#6</a></td></tr>
+<tr><td>2.1 寸<br>2025-11-11</td><td>提问者说 IO12 被同时标成 DATA2 与 SPI_SDA；未验证。</td><td>已关闭，未记录最终解释。按板版次重新核对。</td><td><a href="https://github.com/VIEWESMART/UEDX48480021-MD80ESP32-2.1inch-Touch-Knob-Display/issues/9">#9</a></td></tr>
+<tr><td>4 寸<br>2026-01-13</td><td>提问者报告文档代码的 board 写错；未验证。</td><td>未记录最终状态。检查代码所选板是否与硬件一致。</td><td><a href="https://github.com/VIEWESMART/UEDX48480040ESP32-4inch-Touch-Display/issues/4">#4</a></td></tr>
+<tr><td>1.5 寸<br>2026-05-04、2025-03-03、2026-02-14</td><td>提问者分别报告无 COM 口、询问进入 boot mode、报告 macOS 连接问题；未验证。</td><td>macOS 工单标题标 Resolved；其他两项最终状态未记录。检查 CH340C 与 BOOT 下载模式，不能从标题补出具体修法。</td><td><a href="https://github.com/VIEWESMART/UEDX46460015-MD50ESP32-1.5inch-Touch-Knob-Display/issues/24">#24</a>、<a href="https://github.com/VIEWESMART/UEDX46460015-MD50ESP32-1.5inch-Touch-Knob-Display/issues/3">#3</a>、<a href="https://github.com/VIEWESMART/UEDX46460015-MD50ESP32-1.5inch-Touch-Knob-Display/issues/22">#22</a></td></tr>
+</tbody></table></div>
+<p>没找到针对 VIEWE 的 CSDN、知乎、B 站教程。以下其他板的经验只用于排查，不能替代本板工程。</p>
+
+<h3>5.2 其他公开来源：症状 → 办法 → 出处</h3>
+<p class="lead">RGB 漂移优先看 Espressif FAQ；触摸先扫地址；颜色与编译错误先看版本。论坛和博客的修法均未在 VIEWE 板验证。</p>
+<div class="table-wrap" role="region" aria-label="其他公开来源的故障排查" tabindex="0"><table class="third"><thead><tr><th scope="col">症状</th><th scope="col">先检查 / 可尝试的办法</th><th scope="col">谁、什么时候、出处与限制</th></tr></thead><tbody>
+<tr><td>PSRAM 未开，黑屏、重启或花屏</td><td>S3 Arduino 核对 OPI PSRAM；IDF 开 <code>CONFIG_SPIRAM</code> 并选 Octal。确认 Flash 与应用分区。</td><td><a href="https://docs.espressif.com/projects/esp-idf/en/latest/esp32s3/api-guides/external-ram.html">Espressif 外部 RAM 文档</a>与 <a href="https://docs.lvgl.io/master/integration/chip_vendors/espressif/tips_and_tricks.html">LVGL 性能文档</a>，2026-10-12（上海时间）读取；没有本板实测。</td></tr>
+<tr><td>RGB 屏整体漂移，开 Wi-Fi / OTA 后明显</td><td>检查 PCLK 与带宽；开 Bounce Buffer、Octal PSRAM，考虑 <code>CONFIG_SPIRAM_FETCH_INSTRUCTIONS</code> + <code>CONFIG_SPIRAM_RODATA</code>、编译性能优化。FAQ 写数据缓存行通常 32 字节，bounce buffer 用 64 字节；不推荐 <code>CONFIG_LCD_RGB_RESTART_IN_VSYNC</code>。</td><td><a href="https://docs.espressif.com/projects/esp-faq/en/latest/software-framework/peripherals/lcd.html">Espressif LCD FAQ</a>，2026-10-12（上海时间）读取。它解释 PSRAM 与 Flash 共用 SPI，写 Flash 可暂停 PSRAM；VIEWE-FAQ 引用了同条。</td></tr>
+<tr><td>开 Wi-Fi 后水平偏移，XIP 无效</td><td>论坛作者说最后用 PSRAM 单帧缓冲 + 内部 RAM 10 行 Bounce Buffer 解决，并改用原生 IDF。</td><td><a href="https://forum.lvgl.io/t/lvgl-horizontal-offset-when-esp32-s3-wifi-enabled-esp-idf/21888">LVGL 论坛作者</a>于 2025-08-06 发帖：S3、8 MB PSRAM、800×600 RGB565、LVGL 9.2.2、IDF 5.4、PlatformIO。回复者 kdschlosser 建议 XIP，作者试后无效；本文未验证，不是 VIEWE 板。论坛未提供这里可换算的时分。</td></tr>
+<tr><td>刷新时断层 / 撕裂</td><td>RGB / MIPI-DSI 核对 LVGL 防撕裂与双缓冲；显示库要求 LVGL ≥ 8.3.9。1.5 寸 AMOLED TE 没有已知解决办法。</td><td><a href="https://github.com/esp-arduino-libs/ESP32_Display_Panel">Espressif 显示库</a>与 <a href="https://docs.espressif.com/projects/esp-idf/en/latest/esp32s3/api-reference/peripherals/lcd/rgb_lcd.html">RGB LCD 文档</a>，2026-10-12（上海时间）读取；TE 用户报告见上表，未验证。</td></tr>
+<tr><td>偏色、红蓝反或字节序不对</td><td>分开检查字节序与 BGR 顺序：v8 SPI / QSPI 看 <code>LV_COLOR_16_SWAP</code>，v9 看 <code>LV_COLOR_FORMAT_RGB565_SWAPPED</code>，再看驱动颜色顺序。</td><td><a href="https://github.com/esp-arduino-libs/ESP32_Display_Panel/blob/master/docs/envs/use_with_arduino_cn.md">显示库文档</a>与 <a href="https://lvgl.io/docs/open/main-modules/display/color_format">LVGL 颜色格式文档</a>，2026-10-12（上海时间）读取；1.5 寸工单没有公开最终修法。</td></tr>
+<tr><td>GT911 不响应、坐标偏或方向反</td><td>VIEWE 4.3 寸的 <code>01_i2c_scan</code> 扫 <code>0x5D</code> / <code>0x14</code>。再查供电、I²C、地址、复位时序、分辨率映射、旋转、驱动版本、LVGL 输入注册。</td><td><a href="https://www.kadidisplay.com/blog-news/gt911-touchscreen-not-working-with-lvgl-a-hardware-and-software-checklist/">KADI Display 的检查清单</a>，2026-10-12（上海时间）读取，未取得发布日期；这是另一家显示厂商的博客，本文未验证其数字，只取检查项。地址来自 VIEWE README。</td></tr>
+<tr><td><code>lv_conf.h</code> 找不到，demo 未启用</td><td>复制并启用配置文件。PlatformIO 工程可按其目录配置 <code>-DLV_CONF_INCLUDE_SIMPLE</code>、<code>-I src</code>；demo 需打开相应配置。</td><td><a href="https://docs.lvgl.io/master/integration/frameworks/arduino.html">LVGL 官方文档</a>；<a href="https://blog.pluvio.cn/2023/12/09/01/">Pluvio 博客作者 2023-12-09 的文章</a>与 <a href="https://www.openpilot.cc/archives/4466">openpilot.cc 博客作者的文章</a>，后者未取得发布日期，2026-10-12（上海时间）读取。个人配置均未验证，且不是 VIEWE 板。</td></tr>
+<tr><td>Sketch too big / Flash 配置不对</td><td>核对应用分区，必要时自定义。博客列出 <code>board_build.arduino.partitions = default_16MB.csv</code>、<code>board_upload.flash_size = 16MB</code>、<code>-DBOARD_HAS_PSRAM</code>；只能在相应配置中用。</td><td>上述两位博客作者的旧文与 VIEWE 1.5 寸 2025-10-14 的工单；本文未验证这些配置在 VIEWE 板可用，官方工单仅建议自定义分区。</td></tr>
+<tr><td>Arduino core 3.x 配 TFT_eSPI 编译失败</td><td>先保留 VIEWE 示例的 ESP32_Display_Panel / GFX Library for Arduino，不为套通用教程换 TFT_eSPI。不要为迁就旧库把 VIEWE 工程降到 2.x。</td><td><a href="https://github.com/Bodmer/TFT_eSPI/issues/3355">TFT_eSPI issue #3355 的提问者</a>报告 core 3.0.0 下 <code>gpio_get_level</code> 未声明，降到 2.0.17 可用；2026-10-12（上海时间）读取，未取得创建日，未验证。未核对后来是否修复，不能写“当前所有 3.x 都不兼容”。</td></tr>
+<tr><td><code>lv_disp_drv_t</code> 未定义</td><td>旧 v8 驱动配了 v9 库；统一版本与初始化接口。</td><td><a href="https://forum.lvgl.io/t/error-unknown-type-name-lv-disp-drv-t-did-you-mean-lv-fs-drv-t/18701">LVGL 论坛提问者</a>使用 v9.2.1 + 旧 lvgl_esp32_drivers；2026-10-12（上海时间）读取，未取得发帖日期，未验证。官方 v9 变更记录也可核对接口变化。</td></tr>
+<tr><td>背光亮但无画面 / 首次无串口</td><td>选板宏只开一个，确认板版次；进入 BOOT 下载模式，检查 CH340C。若旧示例链接 404，换单板仓库。</td><td>显示库选板文档与 VIEWE 7 寸 README，2026-10-12（上海时间）读取；4.3 寸背光问题的最终办法仍没找到。</td></tr>
+</tbody></table></div>
+<p>Espressif FAQ 的有限测试给出 Octal PSRAM 80 MHz 时 PCLK 约 22 MHz、120 MHz 时约 30 MHz、Quad 80 MHz 时约 11 MHz 的上限参考；这些不是 VIEWE 的测试参数。它还写防漂移功能需 Arduino core 3.x / IDF ≥ 5.1，core 2.x / IDF 4.4 不具备这条解决路径，并建议需要最佳 GUI 性能时用 ESP-IDF，便于调整编译优化。</p>
+<h3>5.3 X 上用户说的：可作排查线索，尚未验证</h3>
+<p class="lead">这些都是发帖者自己的说法，本文没有验证；多数不是 VIEWE 板。老帖标出年份，LVGL v8 时代的建议容易过时。</p>
+<p>表中时间均为上海时间（UTC+8）。帖子没写板子、LVGL 版本或测试参数的地方，不补参数；作品展示也不当作性能评测。</p>
+<div class="table-wrap" role="region" aria-label="X 用户经验及日期" tabindex="0"><table class="third"><thead><tr><th scope="col">问题</th><th scope="col">谁、什么时候说的</th><th scope="col">他说什么 / 可以查什么</th><th scope="col">限制</th></tr></thead><tbody>
+<tr><td>内部 SRAM 与任务栈</td><td><a href="https://x.com/MoezZhioua/status/2089593557522796899">@MoezZhioua</a><br>2026-08-18 14:01</td><td>他说核心 UI 放内部 RAM，静态资源放 PSRAM；把任务栈放 PSRAM 常崩。先查内部内存分配与任务栈位置。</td><td>回复中的个人经验，未验证；不是所有 S3 内存分配的固定规则。</td></tr>
+<tr><td>DMA 绘制缓冲与 TLS</td><td><a href="https://x.com/thefofoshow/status/2067537434192032119">@thefofoshow</a><br>2026-06-18 17:18；<a href="https://x.com/thefofoshow/status/2067697635868213478">后续回复</a> 2026-06-19 03:55</td><td>他在 Waveshare S3 1.75 寸 466×466 QSPI 项目里，用 PlatformIO + Arduino、LVGL 8.4、Arduino_GFX；说 TLS 要连续内部 RAM，LVGL 缓冲应小且在内部 DMA RAM，JSON 放 PSRAM。后续说掉线大多解决，但仍需留意堆碎片。</td><td>作者自己的项目经历，未验证；用的是 v8.4，不能直接套 v9 或 VIEWE RGB 工程。</td></tr>
+<tr><td>花屏 / 分配不到连续缓冲</td><td><a href="https://x.com/vpx_tech/status/2077675286225662360">@vpx_tech</a><br>2026-07-16 16:42</td><td>他说 LVGL 缓冲必须连续，默认高度过大可能分配失败；在 <code>sdkconfig.defaults</code> 调小 <code>CONFIG_BSP_DISPLAY_LVGL_BUF_HEIGHT</code>。</td><td>未验证；帖子没写板子和 LVGL 版本，所选 BSP 也未必有这个选项。</td></tr>
+<tr><td>SquareLine 版本错位</td><td><a href="https://x.com/Smart__Ayo/status/2053082201395233255">@Smart__Ayo</a><br>2026-05-09 19:58；<a href="https://x.com/Elecrow1/status/2085539444355187081">@Elecrow1</a> 2026-08-07 09:32</td><td>@Smart__Ayo 说自己用 v8.3，因为 Studio 只支持那个版本；Elecrow 自己的帖子写 Vision v1.4.0 支持 LVGL 9.5。Studio 与 Vision、软件版本不同，这两句话未必冲突；先查官方更新记录。</td><td>两帖均未验证。明确写 Vision 9.5 的这条来自 Elecrow，不能写成 VIEWE 或 SquareLine 官方公告。Studio 1.6.2 的支持范围见前文官方记录。</td></tr>
+<tr><td>MicroPython + LVGL 构建难</td><td><a href="https://x.com/KeithMukai/status/1940006250353222031">@KeithMukai</a><br>2025-07-01 19:15（旧帖）</td><td>他说 ESP32-S3 + LVGL 曾是“absolute hell for the longest time”，kdschlosser 的版本让它容易了些，但方式不太标准。</td><td>个人经历，未验证；2025 年的绑定状态不能代表现在所有项目。</td></tr>
+<tr><td>定制 MicroPython 的依赖与构建摩擦</td><td><a href="https://x.com/KeithMukai/status/2008215680030585177">@KeithMukai</a> 2026-01-06 00:35；<a href="https://x.com/matt_trentini/status/2008334298131411449">@matt_trentini</a> 2026-01-06 08:26</td><td>Keith 说为 LVGL 维护定制 MicroPython 移植的复杂度和依赖是问题；matt 回复说“really not there yet”，希望改进构建支持。</td><td>都是个人说法，未验证；matt 的回复不是 MicroPython 官方立场。它们解释了为什么“固件备好后快速改 UI”与“第一次编固件很慢”可同时成立。</td></tr>
+<tr><td>ESP-IDF 扩展与 Docker 工具链</td><td><a href="https://x.com/KeithMukai/status/2006406679571611873">@KeithMukai</a><br>2026-01-01 00:46</td><td>他说花了约 2 天才编译烧录成功，建议别用乐鑫 VS Code 扩展与 Docker 工具链。</td><td>他在 Waveshare S3 + LVGL demo 上的经历，未验证；VIEWE IDF README 仍要求 Espressif 扩展，操作时以本板工程为起点。</td></tr>
+<tr><td>VIEWE 466×466 的编辑器案例</td><td><a href="https://x.com/fbiego_/status/1972271985804951577">@fbiego_</a><br>2025-09-28 20:07（旧帖）</td><td>他写用 LVGL Editor 做 GitHub 数据看板，跑在 Viewe 466×466 AMOLED 上，并提到 @viewedisplay。</td><td>第三方作品帖，未验证；没提供可用于比较的 FPS 或完整构建步骤，也没有看到配图 / 视频内容。</td></tr>
+</tbody></table></div>
+<p>缓冲放内部 SRAM 还是 PSRAM，要分清 DMA 绘制缓冲、完整帧缓冲和静态资源。上表的 QSPI 项目强调小内部 DMA 缓冲；IDF RGB 文档允许帧缓冲放 PSRAM，两者不冲突。先按现成工程运行，再用内存与日志定位自己的瓶颈。</p>
+<div class="card"><h3>VIEWE 自己的帖子也要对照仓库</h3>
+<p>VIEWE 自己的 <a href="https://x.com/viewedisplay/status/1947144199184568798">@viewedisplay 2025-07-21 11:58 帖子</a>写 7 寸 800×480 S3 电容触摸板，并附 VIEWESMART 的 GitHub 链接；<a href="https://x.com/viewedisplay/status/1947594654607937772">2025-07-22 17:48 的帖子</a>写 4 寸 480×480 S3 板。它们能对齐品牌与仓库；产品演示本文未验证，视频没读到。</p>
+<p>VIEWE 自己的 <a href="https://x.com/viewedisplay/status/1999023840622694847">@viewedisplay 2025-12-11 15:49 帖子</a>说旋钮系列有完整 Arduino、MicroPython、ESPHome 支持，却没说明是否含 LVGL 例程；本文未验证这句支持承诺，35 个 Gitee 仓库仍没找到 MicroPython 起步工程。</p>
+<p>VIEWE 相关人员账号 <a href="https://x.com/StevenViewe/status/1941475436221153491">@StevenViewe 在 2025-07-05 20:33 的旧帖</a>写 ESP-NOW 组网使用 Arduino IDE 与 esp32 Arduino 3.03；本文未验证，也没有确认该账号是否是正式官方账号。它不是当前全部板子的安装要求。</p>
+</div>
+</section>
+<section aria-labelledby="recommendation">
+<h2 class="section" id="recommendation">6 和用户给的推荐相比，实际情况</h2>
+<p class="lead">入门建议基本成立；“专业”要分开原生 IDF 与现成 PlatformIO；“快速验证”要先看有没有固件和板驱动。</p>
+<div class="table-wrap" role="region" aria-label="用户推荐与现成工程对照" tabindex="0"><table class="facts"><thead><tr><th scope="col">用户说法</th><th scope="col">实际情况</th><th scope="col">建议</th></tr></thead><tbody>
+<tr><td>新手：Arduino IDE + LVGL + SquareLine Studio</td><td>Arduino 是 VIEWE 主推，附 LVGL 8.4。SquareLine 只有部分旋钮 Arduino 工程与 4.3 / 5 寸 IDF 工程；Studio 对 8.4.0 的支持未写明。</td><td>先用 Arduino 原例程完成屏与触摸验证，再接 UI 设计工具；提前核对导出版本与许可。</td></tr>
+<tr><td>专业：PlatformIO + ESP-IDF + LVGL</td><td>30 个板级 PlatformIO 配置中 26 个是 pioarduino + Arduino 3.1.1，LVGL 多为 8.4.0，另有 4 个用官方 espressif32 + LVGL v8.3 / v8.4；没有 PlatformIO + IDF 成品工程。原生 IDF 示例另有，两个 4.3 寸要求 5.5+。</td><td>工程管理可先选现成 PlatformIO + Arduino；需要 IDF 性能 / 组件时先选原生 IDF 示例，之后再自行搭 PlatformIO + IDF。</td></tr>
+<tr><td>快速验证：MicroPython + LVGL</td><td>官方通用 MicroPython 固件不含 LVGL；VIEWE 没有板固件、初始化或教程，很多显示 / 触摸 IC 没有现成驱动。</td><td>已有匹配 LVGL 固件时，REPL 改 UI 快；第一次验证 VIEWE 板优先查对应出厂固件或 Arduino 原例程。</td></tr>
+<tr><td>示例在规格书最后一页</td><td>公开可见，但旧大仓库已 404；P4 7 寸、P4-Pi 的示例分别在第 11、10 页，不是最后一页。</td><td>用本文逐项链接表转到单板仓库，别被旧 PDF 卡住。</td></tr>
+<tr><td>国内资料下载，请对应规格书型号</td><td>Gitee 可公开克隆，但型号前缀共用、WB-A / WB-B 与商品链接误指都存在。</td><td>尺寸 + 分辨率找仓库，再以仓库 PDF 文件名确认完整型号；代码前读 LICENSE。</td></tr>
+</tbody></table></div>
+</section>
+<section aria-labelledby="related">
+<h2 class="section" id="related">7 和「Grok Bot 能在哪些端上用」报告的关系</h2>
+<p class="lead">两份报告谈同类 ESP32 触摸屏；这份负责板子开发，另一份负责外部服务的接入通道。</p>
+<p><a href="../grok-bot-platforms-devices/report.html">「Grok Bot 能在哪些端上用」全文</a>没有出现 VIEWE。VIEWE 的 1.5 / 2.1 寸旋钮屏、4 寸 480×480 屏，与其中的圆形触摸屏、SenseCAP Indicator 等属于同类硬件。</p>
+<ul>
+<li><a href="../grok-bot-platforms-devices/report.html#esp">第 3 节「ESP 触摸屏能不能当终端」</a>说明 ESP32 跑不了 Grok Bot 客户端，要经外部渠道与 webhook 接入；具体接入限制请读那一节。</li>
+<li><a href="../grok-bot-platforms-devices/report.html#community">第 5 节「社区实例：屏幕接的是谁」</a>包含“小智有 Agent 桥，暂未找到 Grok Bot 桥”和“ESP32 屏当 Agent 终端的类似项目”，可接着看 HermesDisplay、SenseCAP Indicator 等例子。</li>
+</ul>
+<p>VIEWE Gitee 有 <code>xiaozhi-esp32</code> 镜像；SmartRing-Plus 有 <code>11_xiaozhi</code>，ESP32-S3-Round-Dev-Board 有 <code>xiaozhi-esp32-1.75duoban</code>，EMO-Dot 有 <code>xiaozhi-esp32-echoear</code>。这些圆屏 AI 板属于小智生态；已有小智工程不等于已有 Grok Bot 桥。相关通道只在另一份报告展开。</p>
+</section>
+<section aria-labelledby="missing">
+<h2 class="section" id="missing">8 没找到的东西</h2>
+<p class="lead">以下空缺保留原状；没有资料或没有验证的部分，不补成已支持、已修复或可直接运行。</p>
+<div class="table-wrap" role="region" aria-label="资料空缺与未验证范围" tabindex="0"><table class="facts"><thead><tr><th scope="col">范围</th><th scope="col">没找到 / 没核到什么</th><th scope="col">目前能用到哪里</th></tr></thead><tbody>
+<tr><td>VIEWE MicroPython</td><td>示例、固件、教程、单板 Python 初始化；SquareLine MicroPython 模板与 VIEWE 的衔接。</td><td>仅有兼容声明和通用绑定项目；没有 VIEWE 板的上板验证。</td></tr>
+<tr><td>型号与选购</td><td>2.8 寸、3.5 寸 240×320 的官网公开 PDF（价格已补在第 2 节）；7 寸 TN / IPS 的第三方核实；ESP32-S31 4.3 寸新款对应 Gitee 仓库与示例。</td><td>这两块板的 PDF 在 Gitee；S31 只有 Wiki 页面，不套 S3 例程。</td></tr>
+<tr><td>工具版本</td><td>官方 platform-espressif32 v7.1.3 内含 Arduino core / IDF 的具体版本与 Arduino-ESP32 3.x 的关系；SquareLine 官方对 LVGL 8.4.0 的支持；SquareLine 下载页版本号。</td><td>保留 VIEWE pioarduino 配置；Studio 版本看更新记录，8.4.0 导出匹配仍要检查。</td></tr>
+<tr><td>Arduino 板设置</td><td>VIEWE 自己把开发板、Flash、分区、PSRAM、USB CDC 集中写成一组明确文字的说明。</td><td>本文那套 S3 设置来自 4.3 寸 issue 提问者，未验证，需对照本板 README。</td></tr>
+<tr><td>教程与问题结论</td><td>VIEWE 专项 CSDN、知乎、B 站教程；4.3 寸背光亮无图像的最终修法；1.5 寸颜色工单的具体办法、AMOLED TE 撕裂修法；TFT_eSPI 后续是否修复该旧 core 3.0.0 问题。</td><td>用官方工程、文档和仍可读的工单定位；没有做 GitHub 其他账号的全面 issue 搜索。</td></tr>
+<tr><td>站点读取</td><td>echoear-plus 产品页一直被验证码拦，没读到内容；displaywiki 的三个 FAQ 页面没有逐页核对与 VIEWE-FAQ 是否一致；Gitee 项目页没有逐页读取。</td><td>Gitee 清单来自 API 与公开克隆。11 个官网 / Wiki 链接复查遇验证码；只使用此前已读到的内容。</td></tr>
+<tr><td>旧规格书失效数</td><td>先前汇总写 14 份里 8 份失效，逐份核对列出的是 10 份，两个数没有对齐。</td><td>以第 1 节逐份表为准，按自己的型号找替代仓库。</td></tr>
+<tr><td>X 上的专门问题帖</td><td>GT911 / FT6336 / XPT2046 不响应或方向反、<code>lv_conf.h</code> 放置、Arduino 板支持包与 LVGL 库版本冲突、<code>esp_lvgl_port</code> 公告或经验、带芯片 + 面板 + 分辨率 + LVGL 版本 + FPS 的完整评测。</td><td>触摸、版本和配置依据前面的非 X 官方文档；X 作品帖不补参数。</td></tr>
+<tr><td>X 上的许可与账号</td><td>SquareLine 授权 / 免费付费限制 / 导出问题的明确帖子；SquareLine 官方 X 账号；可确认的乐鑫官方账号；LVGL v9 各版本官方 X 公告；任何提到 <code>gitee.com/VIEWESMART</code> 的帖子。</td><td>许可和发布版本看官网与官方发布页；VIEWE 的 X 链接只印证 GitHub 仓库。</td></tr>
+<tr><td>X 检索与附带内容</td><td>有价值的中文 ESP32 + LVGL 踩坑帖、VIEWE 用户具体踩坑实测；帖内图片、视频、X 文章、博客与 GitHub 链接所指正文没读到。</td><td>X 部分只使用已取得的帖子文字，不复述“视频里有”的具体修法；其他章节另有公开仓库文档与博客摘录。</td></tr>
+<tr><td>实测</td><td>所有板的点亮、触摸、供电、FPS、TE、依赖升级与编译烧录验证。</td><td>本报告是开发资料整理，没有做硬件实测。</td></tr>
+</tbody></table></div>
+</section>
+<section class="sources" aria-labelledby="sources">
+<h2 class="section" id="sources">9 来源</h2>
+<p class="lead">主要依据规格书、工程文件和官方文档；用户工单、论坛、博客与 X 只写各自说法，不作硬件验证结论。</p>
+<p>资料读取于 2026-10-12（上海时间）；Gitee 清单读取于 07:49。公开页面与 PDF 均未登录读取。官网 / Wiki 复查有 11 个链接遇到验证码或限速，包括 6 份 PDF、1.3 寸旋钮（官网叫 1.28 寸）/ 2.4 寸 / 5 寸 / SmartRing-Plus 四个产品页，以及 Wiki 资源页；此前在 07:53–07:56 已成功读取。所以下面 viewedisplay.com 和 displaywiki.com 的链接都加“浏览器打开可能需要验证”的提醒；这不表示每个地址都打不开。</p>
+<h3>官方：VIEWE、规格书、仓库与工具文档</h3>
+<ul>
+<li><a href="https://viewedisplay.com/">VIEWE 官网</a>（浏览器打开可能需要验证）。</li>
+<li><a href="https://viewedisplay.com/development-board/">VIEWE 开发板目录</a>（浏览器打开可能需要验证）。</li>
+<li><a href="https://viewedisplay.com/support-center/">VIEWE 支持中心</a>（浏览器打开可能需要验证）。</li>
+<li><a href="https://www.displaywiki.com/zh/support/resource/">优奕视界技术资源中心</a>（浏览器打开可能需要验证）。</li>
+<li><a href="https://www.displaywiki.com/zh/products/esp32-s31-4.3inch-800x480-touch-uart-display-hmi/">ESP32-S31 4.3 寸 Wiki：新款官方命名规则</a>（浏览器打开可能需要验证）。</li>
+<li>仓库入口：<a href="https://gitee.com/VIEWESMART">Gitee 用户主页</a>、<a href="https://gitee.com/VIEWESMART/projects">项目页</a>、<a href="https://gitee.com/api/v5/users/VIEWESMART/repos">仓库 API</a>、<a href="https://github.com/VIEWESMART">GitHub 同名账号</a>。35 个仓库的完整链接见<a href="#models">第 2 节的型号与用途表</a>。</li>
+<li>教程与 FAQ：<a href="https://github.com/VIEWESMART/VIEWE-Tutorial">VIEWE-Tutorial</a>、<a href="https://github.com/VIEWESMART/VIEWE-FAQ">VIEWE-FAQ</a>；单板示例依赖以自己的 README、platformio.ini、idf_component.yml 为准。</li>
+<li>旧地址：<a href="https://github.com/VIEWESMART/ESP32-Arduino">ESP32-Arduino（404）</a>；ESP32-IDF / ESP32-Project 也为 404，替代入口见<a href="#repos">第 1 节逐项表</a>。</li>
+<li><a href="https://viewedisplay.com/download/73/smart-display-datasheet/6553/uedx80480070e-wb-a-v2-0-spec.pdf">规格书：7 寸，14 页</a>（浏览器打开可能需要验证）。</li>
+<li><a href="https://viewedisplay.com/download/73/smart-display-datasheet/8399/uedx80480050e-wb-a-v3-3-spec.pdf">规格书：5 寸，14 页</a>（浏览器打开可能需要验证）。</li>
+<li><a href="https://viewedisplay.com/download/73/smart-display-datasheet/6554/uedx80480043e-wb-a-v3-2-spec.pdf">规格书：4.3 寸 800×480，14 页</a>（浏览器打开可能需要验证）。</li>
+<li><a href="https://viewedisplay.com/download/73/smart-display-datasheet/6566/uedx48270043e-wb-a-v2-0-spec-2.pdf">规格书：4.3 寸 480×272，14 页</a>（浏览器打开可能需要验证）。</li>
+<li><a href="https://viewedisplay.com/download/73/smart-display-datasheet/6552/uedx48480040e-wb-a-v3-1-spec.pdf">规格书：4 寸，15 页</a>（浏览器打开可能需要验证）。</li>
+<li><a href="https://viewedisplay.com/download/73/smart-display-datasheet/6560/uedx32480035e-wb-a-v1-0-spec-2.pdf">规格书：3.5 寸 320×480，14 页</a>（浏览器打开可能需要验证）。</li>
+<li><a href="https://viewedisplay.com/download/73/smart-display-datasheet/6550/uedx24320024e-wb-a-v1-0-spec-2.pdf">规格书：2.4 寸，14 页（文件名 v1-0，封面 V1.1）</a>（浏览器打开可能需要验证）。</li>
+<li><a href="https://viewedisplay.com/download/73/smart-display-datasheet/6388/uedx17320019e-wb-a-v3-1-spec.pdf">规格书：1.9 寸，12 页</a>（浏览器打开可能需要验证）。</li>
+<li><a href="https://viewedisplay.com/download/73/smart-display-datasheet/6338/uedx48480021-md80e-v3-2-spec.pdf">规格书：2.1 旋钮无触摸，10 页</a>（浏览器打开可能需要验证）。</li>
+<li><a href="https://viewedisplay.com/download/73/smart-display-datasheet/6848/uedx46460015-md50e-v1-1-spec-2.pdf">规格书：1.5 AMOLED，10 页</a>（浏览器打开可能需要验证）。</li>
+<li><a href="https://viewedisplay.com/download/73/smart-display-datasheet/6342/uedx24240013-md50e-v3-2-spec.pdf">规格书：1.3 旋钮，10 页</a>（浏览器打开可能需要验证）。</li>
+<li><a href="https://viewedisplay.com/download/73/smart-display-datasheet/11151/7-1024x600-esp32-p4-c6-touch-display-spec_v1-2-2.pdf">规格书：P4 7 寸，12 页</a>（浏览器打开可能需要验证）。</li>
+<li><a href="https://viewedisplay.com/download/73/smart-display-datasheet/11907/smartring-plus-v1-1-spec-english.pdf">规格书：SmartRing-Plus，12 页</a>（浏览器打开可能需要验证）。</li>
+<li><a href="https://viewedisplay.com/download/518/embedded-system/11298/esp32-p4-pi-viewe_spec_v1-1.pdf">规格书：P4-Pi，11 页</a>（浏览器打开可能需要验证）。</li>
+<li><a href="https://viewedisplay.com/product/esp32-7-inch-800x480-rgb-ips-tft-display-touch-screen-arduino-lvgl-uart/">产品页：7 寸 800×480</a>（浏览器打开可能需要验证）；2026-10-12 的美元现价见价格表，会变。</li>
+<li><a href="https://viewedisplay.com/product/esp32-5-inch-800x480-rgb-ips-tft-display-touch-screen-arduino-lvgl/">产品页：5 寸 800×480</a>（浏览器打开可能需要验证）；2026-10-12 的美元现价见价格表，会变。</li>
+<li><a href="https://viewedisplay.com/product/esp32-4-3-inch-800x480-rgb-ips-tft-display-touch-screen-arduino-lvgl/">产品页：4.3 寸 800×480</a>（浏览器打开可能需要验证）；2026-10-12 的美元现价见价格表，会变。</li>
+<li><a href="https://viewedisplay.com/product/esp32-4-3-inch-480x272-rgb-ips-tft-display-touch-screen-arduino-lvgl-wifi-ble-uart-smart-module/">产品页：4.3 寸 480×272</a>（浏览器打开可能需要验证）；2026-10-12 的美元现价见价格表，会变。</li>
+<li><a href="https://viewedisplay.com/product/esp32-4-inch-tft-display-touch-screen-arduino-lvgl/">产品页：4 寸 480×480</a>（浏览器打开可能需要验证）；2026-10-12 的美元现价见价格表，会变。</li>
+<li><a href="https://viewedisplay.com/product/esp32-3-5-inch-320x480-mcu-ips-tft-display-touch-screen-arduino-lvgl-wifi-ble-uart-smart-module/">产品页：3.5 寸 320×480</a>（浏览器打开可能需要验证）；2026-10-12 的美元现价见价格表，会变。</li>
+<li><a href="https://viewedisplay.com/product/esp32-2-4-inch-240x320-rgb-ips-tft-display-touch-screen-arduino-lvgl-wifi-ble-uart-smart-module/">产品页：2.4 寸</a>（浏览器打开可能需要验证）；2026-10-12 的美元现价见价格表，会变。</li>
+<li><a href="https://viewedisplay.com/product/esp32-2-8-inch-240x320-mcu-ips-tft-display-touch-screen-arduino-lvgl-wifi-ble-uart-smart-module/">产品页：2.8 寸 240×320</a>（浏览器打开可能需要验证）；价格来自官网公开的商品接口，2026-10-12 约 09:02 读取，会变。</li>
+<li><a href="https://viewedisplay.com/product/esp32-3-5-inch-240x320-mcu-ips-tft-display-touch-screen-arduino-lvgl-wifi-ble-uart-smart-module/">产品页：3.5 寸 240×320</a>（浏览器打开可能需要验证）；价格来自官网公开的商品接口，2026-10-12 约 09:02 读取，会变。</li>
+<li><a href="https://viewedisplay.com/product/esp32-1-9-inch-170x320-mcu-ips-tft-display-touch-screen-arduino-lvgl/">产品页：1.9 寸</a>（浏览器打开可能需要验证）；2026-10-12 的美元现价见价格表，会变。</li>
+<li><a href="https://viewedisplay.com/product/esp32-2-1-inch-480x480-round-tft-knob-touch-display-rotary-encoder-arduino-lvgl/">产品页：2.1 寸旋钮</a>（浏览器打开可能需要验证）；2026-10-12 的美元现价见价格表，会变。</li>
+<li><a href="https://viewedisplay.com/product/esp32-1-5-inch-466x466-round-amoled-knob-display-touch-screen-arduino-lvgl/">产品页：1.5 寸 AMOLED 旋钮</a>（浏览器打开可能需要验证）；2026-10-12 的美元现价见价格表，会变。</li>
+<li><a href="https://viewedisplay.com/product/esp32-1-28-inch-240x240-round-tft-knob-display-gc9a01-arduino-lvgl/">产品页：1.3 寸 C3 旋钮（官网叫 1.28 寸）</a>（浏览器打开可能需要验证）；2026-10-12 的美元现价见价格表，会变。</li>
+<li><a href="https://viewedisplay.com/product/7-inch-1024x600-esp32-p4-wifi6-touch-smart-hmi-uart-display/">产品页：7 寸 P4</a>（浏览器打开可能需要验证）；2026-10-12 的美元现价见价格表，会变。</li>
+<li><a href="https://viewedisplay.com/product/esp32-p4-pi-dev-board-wifi6/">产品页：P4-Pi</a>（浏览器打开可能需要验证）；2026-10-12 的美元现价见价格表，会变。</li>
+<li><a href="https://viewedisplay.com/product/smart-ring-plus-esp32-ai-chatbot-1-8-inch-smart-touch-display/">产品页：SmartRing-Plus</a>（浏览器打开可能需要验证）；2026-10-12 的美元现价见价格表，会变。</li>
+<li><a href="https://github.com/arduino/arduino-ide/releases/tag/2.3.10">arduino/arduino-ide 2.3.10 发布页</a>。</li>
+<li><a href="https://github.com/espressif/arduino-esp32/releases/tag/3.3.12">espressif/arduino-esp32 3.3.12 发布页</a>。</li>
+<li><a href="https://github.com/lvgl/lvgl/releases/tag/v9.6.0">lvgl/lvgl v9.6.0 发布页</a>。</li>
+<li><a href="https://github.com/espressif/esp-idf/releases/tag/v6.1">espressif/esp-idf v6.1 发布页</a>。</li>
+<li><a href="https://github.com/micropython/micropython/releases/tag/v1.29.0">micropython/micropython v1.29.0 发布页</a>。</li>
+<li><a href="https://github.com/platformio/platform-espressif32/releases/tag/v7.1.3">platformio/platform-espressif32 v7.1.3 发布页</a>。</li>
+<li><a href="https://github.com/pioarduino/platform-espressif32">pioarduino/platform-espressif32 项目页</a>。</li>
+<li><a href="https://docs.squareline.io/docs/miscellanos/changelog/">SquareLine 更新记录</a>。</li>
+<li><a href="https://github.com/esp-arduino-libs/ESP32_Display_Panel/blob/master/docs/envs/use_with_arduino_cn.md">ESP32_Display_Panel 官方说明</a>。</li>
+<li><a href="https://docs.espressif.com/projects/arduino-esp32/en/latest/installing.html">Espressif 安装文档</a>。</li>
+<li><a href="https://github.com/esp-arduino-libs/ESP32_Display_Panel">ESP32_Display_Panel</a>。</li>
+<li><a href="https://docs.lvgl.io/master/integration/frameworks/arduino.html">LVGL Arduino 文档</a>。</li>
+<li><a href="https://squareline.io/downloads">官方下载页</a>。</li>
+<li><a href="https://squareline.io/pricing/licenses">SquareLine 官方许可页</a>。</li>
+<li><a href="https://docs.platformio.org/en/latest/integration/ide/vscode.html">PlatformIO 的 VS Code 文档</a>。</li>
+<li><a href="https://docs.platformio.org/en/latest/platforms/espressif32.html">Espressif32 平台</a>。</li>
+<li><a href="https://docs.platformio.org/en/latest/frameworks/arduino.html">Arduino 框架</a>。</li>
+<li><a href="https://docs.platformio.org/en/latest/frameworks/espidf.html">ESP-IDF 框架</a>。</li>
+<li><a href="https://docs.lvgl.io/master/integration/frameworks/platformio.html">LVGL 集成</a>。</li>
+<li><a href="https://components.espressif.com/components/viewesmart/bsp_uedx80480043_wb_a">viewesmart/bsp_uedx80480043_wb_a</a>。</li>
+<li><a href="https://docs.lvgl.io/master/integration/chip_vendors/espressif/add_lvgl_to_esp32_idf_project.html">LVGL 官方 IDF 集成文档</a>。</li>
+<li><a href="https://components.espressif.com/components/espressif/esp_lvgl_port">esp_lvgl_port</a>。</li>
+<li><a href="https://docs.espressif.com/projects/esp-idf/en/latest/esp32s3/api-guides/external-ram.html">S3 外部 RAM</a>。</li>
+<li><a href="https://docs.espressif.com/projects/esp-idf/en/latest/esp32s3/api-reference/peripherals/lcd/rgb_lcd.html">RGB LCD</a>。</li>
+<li><a href="https://components.espressif.com/components/lvgl/lvgl">LVGL 组件</a>。</li>
+<li><a href="https://docs.lvgl.io/master/integration/chip_vendors/espressif/tips_and_tricks.html">LVGL ESP32 性能技巧</a>。</li>
+<li><a href="https://micropython.org/download/ESP32_GENERIC_S3/">MicroPython 官方 S3 固件</a>。</li>
+<li><a href="https://docs.lvgl.io/master/integration/bindings/micropython.html">LVGL 官方 MicroPython 文档</a>。</li>
+<li><a href="https://github.com/lvgl/lv_micropython">lvgl/lv_micropython</a>。</li>
+<li><a href="https://docs.lvgl.io/9.0/CHANGELOG.html">LVGL v9 官方变更记录</a>。</li>
+<li><a href="https://lvgl.io/docs/open/main-modules/display/color_format">官方颜色格式说明</a>：lvgl.io。</li>
+<li><a href="https://github.com/espressif/esp-bsp/blob/master/components/esp_lvgl_port/README.md">esp_lvgl_port README</a>。</li>
+<li><a href="https://docs.espressif.com/projects/esp-faq/en/latest/software-framework/peripherals/lcd.html">Espressif LCD FAQ</a>。</li>
+</ul>
+<h3>社区：GitHub issue、论坛、博客</h3>
+<p>工单日期与状态见第 5 节；作者账号名未取得的地方只称提问者或网站作者。以下个人经历均未验证，未取得发帖日期的来源按读取日期说明。</p>
+<ul>
+<li><a href="https://github.com/lvgl-micropython/lvgl_micropython">lvgl_micropython 分叉项目 README</a>：2026-10-12（上海时间）读取；构建限制与 VIEWE 板适配未验证。</li>
+<li><a href="https://github.com/VIEWESMART/UEDX80480043ESP32-4.3inch-Touch-Display/issues/1">UEDX80480043ESP32-4.3inch-Touch-Display issue #1</a>。</li>
+<li><a href="https://github.com/VIEWESMART/UEDX48480021-MD80ESP32-2.1inch-Touch-Knob-Display/issues/4">UEDX48480021-MD80ESP32-2.1inch-Touch-Knob-Display issue #4</a>。</li>
+<li><a href="https://github.com/VIEWESMART/UEDX80480070ESP32-7inch-Touch-Display/issues/2">UEDX80480070ESP32-7inch-Touch-Display issue #2</a>。</li>
+<li><a href="https://github.com/VIEWESMART/UEDX80480070ESP32-7inch-Touch-Display/issues/3">UEDX80480070ESP32-7inch-Touch-Display issue #3</a>。</li>
+<li><a href="https://github.com/VIEWESMART/UEDX46460015-MD50ESP32-1.5inch-Touch-Knob-Display/issues/12">UEDX46460015-MD50ESP32-1.5inch-Touch-Knob-Display issue #12</a>。</li>
+<li><a href="https://github.com/VIEWESMART/UEDX46460015-MD50ESP32-1.5inch-Touch-Knob-Display/issues/13">UEDX46460015-MD50ESP32-1.5inch-Touch-Knob-Display issue #13</a>。</li>
+<li><a href="https://github.com/VIEWESMART/UEDX46460015-MD50ESP32-1.5inch-Touch-Knob-Display/issues/4">UEDX46460015-MD50ESP32-1.5inch-Touch-Knob-Display issue #4</a>。</li>
+<li><a href="https://github.com/VIEWESMART/UEDX48480021-MD80ESP32-2.1inch-Touch-Knob-Display/issues/6">UEDX48480021-MD80ESP32-2.1inch-Touch-Knob-Display issue #6</a>。</li>
+<li><a href="https://github.com/VIEWESMART/UEDX46460015-MD50ESP32-1.5inch-Touch-Knob-Display/issues/18">UEDX46460015-MD50ESP32-1.5inch-Touch-Knob-Display issue #18</a>。</li>
+<li><a href="https://github.com/VIEWESMART/UEDX48480021-MD80ESP32-2.1inch-Touch-Knob-Display/issues/7">UEDX48480021-MD80ESP32-2.1inch-Touch-Knob-Display issue #7</a>。</li>
+<li><a href="https://github.com/VIEWESMART/UEDX46460015-MD50ESP32-1.5inch-Touch-Knob-Display/issues/14">UEDX46460015-MD50ESP32-1.5inch-Touch-Knob-Display issue #14</a>。</li>
+<li><a href="https://github.com/VIEWESMART/UEDX46460015-MD50ESP32-1.5inch-Touch-Knob-Display/issues/23">UEDX46460015-MD50ESP32-1.5inch-Touch-Knob-Display issue #23</a>。</li>
+<li><a href="https://github.com/VIEWESMART/UEDX46460015-MD50ESP32-1.5inch-Touch-Knob-Display/issues/17">UEDX46460015-MD50ESP32-1.5inch-Touch-Knob-Display issue #17</a>。</li>
+<li><a href="https://github.com/VIEWESMART/UEDX46460015-MD50ESP32-1.5inch-Touch-Knob-Display/issues/6">UEDX46460015-MD50ESP32-1.5inch-Touch-Knob-Display issue #6</a>。</li>
+<li><a href="https://github.com/VIEWESMART/UEDX80480050ESP32-5inch-Touch-Display/issues/1">UEDX80480050ESP32-5inch-Touch-Display issue #1</a>。</li>
+<li><a href="https://github.com/VIEWESMART/UEDX48480040ESP32-4inch-Touch-Display/issues/2">UEDX48480040ESP32-4inch-Touch-Display issue #2</a>。</li>
+<li><a href="https://github.com/VIEWESMART/UEDX48480040ESP32-4inch-Touch-Display/issues/1">UEDX48480040ESP32-4inch-Touch-Display issue #1</a>。</li>
+<li><a href="https://github.com/VIEWESMART/UEDX24320028ESP32-3.5inch-320_480-Display/issues/1">UEDX24320028ESP32-3.5inch-320_480-Display issue #1</a>。</li>
+<li><a href="https://github.com/VIEWESMART/UEDX80480070ESP32-7inch-Touch-Display/issues/6">UEDX80480070ESP32-7inch-Touch-Display issue #6</a>。</li>
+<li><a href="https://github.com/VIEWESMART/UEDX48480021-MD80ESP32-2.1inch-Touch-Knob-Display/issues/9">UEDX48480021-MD80ESP32-2.1inch-Touch-Knob-Display issue #9</a>。</li>
+<li><a href="https://github.com/VIEWESMART/UEDX48480040ESP32-4inch-Touch-Display/issues/4">UEDX48480040ESP32-4inch-Touch-Display issue #4</a>。</li>
+<li><a href="https://github.com/VIEWESMART/UEDX46460015-MD50ESP32-1.5inch-Touch-Knob-Display/issues/24">UEDX46460015-MD50ESP32-1.5inch-Touch-Knob-Display issue #24</a>。</li>
+<li><a href="https://github.com/VIEWESMART/UEDX46460015-MD50ESP32-1.5inch-Touch-Knob-Display/issues/3">UEDX46460015-MD50ESP32-1.5inch-Touch-Knob-Display issue #3</a>。</li>
+<li><a href="https://github.com/VIEWESMART/UEDX46460015-MD50ESP32-1.5inch-Touch-Knob-Display/issues/22">UEDX46460015-MD50ESP32-1.5inch-Touch-Knob-Display issue #22</a>。</li>
+<li><a href="https://forum.lvgl.io/t/lvgl-horizontal-offset-when-esp32-s3-wifi-enabled-esp-idf/21888">LVGL 论坛作者</a>。</li>
+<li><a href="https://www.kadidisplay.com/blog-news/gt911-touchscreen-not-working-with-lvgl-a-hardware-and-software-checklist/">KADI Display 的检查清单</a>。</li>
+<li><a href="https://blog.pluvio.cn/2023/12/09/01/">Pluvio 博客作者 2023-12-09 的文章</a>。</li>
+<li><a href="https://www.openpilot.cc/archives/4466">openpilot.cc 博客作者的文章</a>。</li>
+<li><a href="https://github.com/Bodmer/TFT_eSPI/issues/3355">TFT_eSPI issue #3355</a>。</li>
+<li><a href="https://forum.lvgl.io/t/error-unknown-type-name-lv-disp-drv-t-did-you-mean-lv-fs-drv-t/18701">LVGL 论坛提问者</a>。</li>
+</ul>
+<h3>X：用户、开发者与 VIEWE 自己的帖子</h3>
+<p>时间为上海时间（UTC+8）；全文中各条均写明账号、日期和未验证范围。这里只列本文引用的帖子，配图、视频及外链正文没有据此展开。</p>
+<ul>
+<li><a href="https://x.com/MoezZhioua/status/2089593557522796899">@MoezZhioua · 2026-08-18 14:01（上海时间）</a>；未验证。</li>
+<li><a href="https://x.com/thefofoshow/status/2067537434192032119">@thefofoshow · 2026-06-18 17:18（上海时间）</a>；未验证。</li>
+<li><a href="https://x.com/thefofoshow/status/2067697635868213478">@thefofoshow · 2026-06-19 03:55（上海时间）</a>；未验证。</li>
+<li><a href="https://x.com/vpx_tech/status/2077675286225662360">@vpx_tech · 2026-07-16 16:42（上海时间）</a>；未验证。</li>
+<li><a href="https://x.com/Smart__Ayo/status/2053082201395233255">@Smart__Ayo · 2026-05-09 19:58（上海时间）</a>；未验证。</li>
+<li><a href="https://x.com/Elecrow1/status/2085539444355187081">@Elecrow1 · 2026-08-07 09:32（上海时间）</a>；未验证。</li>
+<li><a href="https://x.com/KeithMukai/status/1940006250353222031">@KeithMukai · 2025-07-01 19:15（上海时间）</a>；未验证。</li>
+<li><a href="https://x.com/KeithMukai/status/2008215680030585177">@KeithMukai · 2026-01-06 00:35（上海时间）</a>；未验证。</li>
+<li><a href="https://x.com/matt_trentini/status/2008334298131411449">@matt_trentini · 2026-01-06 08:26（上海时间）</a>；未验证。</li>
+<li><a href="https://x.com/KeithMukai/status/2006406679571611873">@KeithMukai · 2026-01-01 00:46（上海时间）</a>；未验证。</li>
+<li><a href="https://x.com/fbiego_/status/1972271985804951577">@fbiego_ · 2025-09-28 20:07（上海时间）</a>；未验证。</li>
+<li><a href="https://x.com/viewedisplay/status/1947144199184568798">@viewedisplay · 2025-07-21 11:58（上海时间）</a>；未验证。</li>
+<li><a href="https://x.com/viewedisplay/status/1947594654607937772">@viewedisplay · 2025-07-22 17:48（上海时间）</a>；未验证。</li>
+<li><a href="https://x.com/viewedisplay/status/1999023840622694847">@viewedisplay · 2025-12-11 15:49（上海时间）</a>；未验证。</li>
+<li><a href="https://x.com/StevenViewe/status/1941475436221153491">@StevenViewe · 2025-07-05 20:33（上海时间）</a>；未验证。</li>
+</ul>
+</section>
+<footer>整理于 2026-10-12（上海时间，UTC+8）。参数与现价来自读取时的公开文档；工程版本按对应仓库核对。未做硬件实测。</footer>
+</main>
+</body>
+</html>

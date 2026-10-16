@@ -1,0 +1,5 @@
+dependencies:
+  idf: ">=5.5"
+  lvgl/lvgl: "9.4.0"
+# BSP(smartring_plus) 与 LVGL 适配器(esp_lvgl_adapter) 已本地化到 components/：
+# 前者启用 TE 同步，后者打了"每帧只在首个 flush 块等 vsync"的补丁

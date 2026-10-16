@@ -1,0 +1,19 @@
+# ---- ESP-IDF 构建产物 ----
+firmware/grokbot/build/
+firmware/grokbot/sdkconfig
+firmware/grokbot/sdkconfig.old
+
+# 组件管理器拉取的依赖（可由 idf_component.yml + dependencies.lock 复原）
+# 注意：components/ 目录是本地化的 BSP/适配器补丁，必须入库，不要忽略
+firmware/grokbot/managed_components/
+
+# ---- 第三方参考代码（可随时重新克隆）----
+# git clone https://github.com/jeremy-prt/bloub reference/bloub
+reference/bloub/
+reference/smartring-plus-full/
+reference/smartring_plus/
+
+# ---- 系统/编辑器 ----
+.DS_Store
+*.swp
+.vscode/
