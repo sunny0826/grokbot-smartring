@@ -36,11 +36,11 @@ void sphereFrame(const HeadGaze &gaze, float azDeg, float elDeg, float scale,
     depth = f.z;
 }
 
-void eyePoses(const HeadGaze &gaze, float scale, float split, EyePose out[2])
+void eyePoses(const HeadGaze &gaze, float scale, float split, EyePose out[2], float el)
 {
     for (int i = 0; i < 2; i++) {
         float m[4];
-        sphereFrame(gaze, split * (i == 0 ? -1.f : 1.f), 0.f, scale,
+        sphereFrame(gaze, split * (i == 0 ? -1.f : 1.f), el, scale,
                     out[i].x, out[i].y, m, out[i].depth);
         out[i].a = m[0];
         out[i].b = m[1];

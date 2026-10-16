@@ -10,7 +10,9 @@ The character and all animation constants are ported frame-by-frame from
 [bloub](https://github.com/jeremy-prt/bloub) (MIT) — radial-contour body,
 spherical-projection eyes, blink & gaze drift, measured easing curves. A second
 skin, `pika` (yellow blob with capsule eyes and red cheeks, after
-`reference/character-ref.png`), shares the same physics and carousel.
+`reference/character-ref.png`), shares the same physics and carousel. A third
+skin, `rowlet` (tan owl with a white face mask, orange beak and green leaf bow
+tie, after `reference/character-ref-2.png`), does the same.
 
 ## Features
 
@@ -24,11 +26,13 @@ skin, `pika` (yellow blob with capsule eyes and red cheeks, after
   spell: X-cross eyes, spiralling gaze, wobbling body; works in any orientation
 - **Poke** — tapping the screen kicks the bot against gravity and forces a blink
 - **Character switch** — swipe left/right on the screen to cycle skins. Ships with
-  `grokbot` (the bloub port) and `pika` (flat yellow blob, capsule eyes, round red
+  `grokbot` (the bloub port), `pika` (flat yellow blob, capsule eyes, round red
   cheeks riding the same gaze sphere as the pupils — see
-  `reference/character-ref.png`); both share the same physics, spherical gaze,
-  blink schedule and idle carousel
-- **Upright head (pika)** — the face counter-rotates against gravity so it always
+  `reference/character-ref.png`) and `rowlet` (tan owl, white two-lobed face mask
+  and beak riding the gaze sphere, green leaf bow tie, belly and feet fixed to the
+  upright body — see `reference/character-ref-2.png`); all share the same physics,
+  spherical gaze, blink schedule and idle carousel
+- **Upright head (pika, rowlet)** — the face counter-rotates against gravity so it always
   faces world-up while the body rolls downhill
 - **Tear-free pipeline** — TE-hardware-synced flush (ST77916 TE line on GPIO38),
   internal-RAM strip buffers, measured-wall-time physics step. ~28 fps measured,
@@ -71,6 +75,7 @@ firmware/grokbot/           ESP-IDF firmware project
 │   ├── bot_states.*        Idle/thinking/notify/orbit poses (ported from bloub)
 │   ├── bot_character.*     Skin registry + grok-bot skin + shared skin helpers
 │   ├── bot_character_pika.cpp  "pika" skin (yellow blob, capsule eyes, red cheeks)
+│   ├── bot_character_rowlet.cpp "rowlet" skin (tan owl, face mask, leaf bow tie)
 │   └── bot_math.h          Easing/noise helpers (no newlib trig in hot paths)
 ├── sim/                    Desktop skin preview: renders poses to PPM/PNG, no flashing
 │   ├── sim_main.cpp        Scene table + PPM dump (build instructions in the comment)
@@ -85,6 +90,7 @@ docs/
 ├── display-pipeline-notes.md   Post-mortem: 5 root causes from jank to 28 fps tear-free
 └── board-guide.html            VIEWE board & toolchain onboarding notes (Chinese)
 reference/                  Third-party sources (git-ignored) + character-ref.png (pika design)
+                            + character-ref-2.png (rowlet design)
 ```
 
 ## Desktop Skin Preview

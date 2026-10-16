@@ -66,9 +66,11 @@ void skin_draw_badge(CharacterDrawParams &p);
 // (t11 t12 / t21 t22) maps body-local units to screen px — pass the squash
 // matrix M for a blob, or M·R(upright) for a head that stays world-up.
 // splitDeg = half eye separation on the sphere (degrees);
-// eyeW/eyeH = full eye size in ball-radius units.
+// eyeW/eyeH = full eye size in ball-radius units;
+// elDeg = eye elevation on the sphere (degrees, >0 = downward, default eye line).
 void skin_draw_eyes(CharacterDrawParams &p, float t11, float t12, float t21, float t22,
-                    float splitDeg, float eyeW, float eyeH, uint16_t color565);
+                    float splitDeg, float eyeW, float eyeH, uint16_t color565,
+                    float elDeg = 0.f);
 // Sleepy state's Zzz bubbles: three ink Z's floating up off the head, animated
 // by p.localT, opacity from pose.zzzA
 void skin_draw_zzz(CharacterDrawParams &p);

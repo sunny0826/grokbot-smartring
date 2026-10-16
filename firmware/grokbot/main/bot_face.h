@@ -21,7 +21,8 @@ constexpr float EYE_W = 0.186f;      // resting eye width (ball-radius units)
 constexpr float EYE_H = 0.412f;      // resting eye height
 constexpr HeadGaze REST_GAZE = { 28.49f, 28.62f, -13.f };  // measured resting gaze: up-right
 
-void eyePoses(const HeadGaze &gaze, float scale, float split, EyePose out[2]);
+// el = eye elevation on the sphere (degrees, >0 = downward); default 0 = eye line
+void eyePoses(const HeadGaze &gaze, float scale, float split, EyePose out[2], float el = 0.f);
 
 // Project an arbitrary point on the face sphere together with its tangent basis:
 // az/el are degrees relative to the face forward (az > 0 = to the right,

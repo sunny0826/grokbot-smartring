@@ -5,7 +5,8 @@
 #include <cmath>
 
 // Skins living in their own translation units:
-void pika_draw(CharacterDrawParams &p);  // bot_character_pika.cpp
+void pika_draw(CharacterDrawParams &p);    // bot_character_pika.cpp
+void rowlet_draw(CharacterDrawParams &p);  // bot_character_rowlet.cpp
 
 /* ---------------- shared building blocks ---------------- */
 
@@ -60,13 +61,13 @@ void skin_draw_badge(CharacterDrawParams &p)
 }
 
 void skin_draw_eyes(CharacterDrawParams &p, float t11, float t12, float t21, float t22,
-                    float splitDeg, float eyeW, float eyeH, uint16_t color565)
+                    float splitDeg, float eyeW, float eyeH, uint16_t color565, float elDeg)
 {
     const BotPose &pose = *p.pose;
     if (pose.eyeAlpha <= 0.01f) return;
     float eyeX = clampf(pose.eyeX);
     EyePose ep[2];
-    eyePoses(p.gaze, p.scale, splitDeg, ep);
+    eyePoses(p.gaze, p.scale, splitDeg, ep, elDeg);
     float lidK = blinkScale(p.lid);
     for (int i = 0; i < 2; i++) {
         if (ep[i].depth < 0.05f) continue;  // rotated to the back
@@ -165,7 +166,8 @@ struct CharacterDef {
 
 static const CharacterDef CHARACTERS[] = {
     { "grokbot", grokbot_draw, false },
-    { "pika",    pika_draw,    true  },  // ears extend past the body bbox
+    { "pika",    pika_draw,    true  },  // cheeks ride the gaze sphere past the bbox
+    { "rowlet",  rowlet_draw,  true  },  // feet stick out past the body bbox
 };
 static int s_charIdx = 0;
 

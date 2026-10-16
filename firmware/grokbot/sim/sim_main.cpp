@@ -54,6 +54,13 @@ int main()
         { "pika_happy",   1, BotState::Happy,    0.45f, REST_GAZE,               0.f, -1.f,    0.f,   0.f },
         { "pika_sleepy",  1, BotState::Sleepy,   2.5f, REST_GAZE,                0.f, -1.f,    0.f,   0.f },
         { "pika_dizzy",   1, BotState::Dizzy,    0.8f, REST_GAZE,                0.f, -1.f,    0.f,   0.f },
+        // rowlet scenes
+        { "rowlet_flat",    2, BotState::Idle,     1.0f, REST_GAZE,                0.f, -1.f,    0.f,   0.f },
+        { "rowlet_right",   2, BotState::Idle,     1.0f, { 38.f, 0.f, -18.f },    -1.f, 0.f,     0.15f, 0.f },
+        { "rowlet_upsided", 2, BotState::Idle,     1.0f, { 0.f, 38.f, 0.f },       0.f, 1.f,     0.f,   0.f },
+        { "rowlet_happy",   2, BotState::Happy,    0.45f, REST_GAZE,               0.f, -1.f,    0.f,   0.f },
+        { "rowlet_sleepy",  2, BotState::Sleepy,   2.5f, REST_GAZE,                0.f, -1.f,    0.f,   0.f },
+        { "rowlet_dizzy",   2, BotState::Dizzy,    0.8f, REST_GAZE,                0.f, -1.f,    0.f,   0.f },
         // grokbot references
         { "grok_flat",    0, BotState::Idle,     1.0f, REST_GAZE,                0.f, -1.f,    0.f,   0.f },
         { "grok_happy",   0, BotState::Happy,    0.45f, REST_GAZE,               0.f, -1.f,    0.f,   0.f },
