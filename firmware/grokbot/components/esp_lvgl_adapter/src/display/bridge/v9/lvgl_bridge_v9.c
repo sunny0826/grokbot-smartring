@@ -143,6 +143,7 @@ typedef struct esp_lv_adapter_display_bridge_v9 {
     esp_lv_adapter_vsync_timing_t vsync_timing;   /*!< Standardized VSYNC timing context */
     bool idf_callbacks_registered;
     bool idf_callback_registration_enabled;
+    bool te_frame_in_progress;
 
     /* --- Pipeline buffer management (owned by bridge, inited by display_bridge_pipeline_init_from_cfg) --- */
     esp_lv_adapter_display_pipeline_t pipeline;
@@ -2338,26 +2339,17 @@ static void display_bridge_v9_flush_gpio_te(esp_lv_adapter_display_bridge_v9_t *
         lv_draw_sw_rgb565_swap(color_map, lv_area_get_size(area));
     }
 
-    size_t flush_size = (size_t)lv_area_get_size(area) * bridge_color_bytes(impl);
-
-    /* [local patch] With TE_SYNC single buffering, flushes are strictly serialized and one
-     * frame is split into multiple 40-row strips. The original code waited for vsync on
-     * every strip, so N strips = N frame periods (8 strips -> ~130ms/frame).
-     * Changed to wait for vsync only on the first strip of each frame and transmit the
-     * remaining strips back-to-back: writes start at the TE edge and stay ahead of the
-     * scan beam, so tearing is still avoided while the frame rate returns to the panel's
-     * native rate. */
-    static uint32_t s_te_chunk_idx = 0;
-    const bool te_first_chunk = (s_te_chunk_idx == 0);
-    if (lv_display_flush_is_last(disp)) {
-        s_te_chunk_idx = 0;
-    } else {
-        s_te_chunk_idx++;
-    }
+    /* A single DMA buffer serializes strips. Gate only the first strip on TE,
+     * and measure the complete frame, including the gaps between strips. */
+    const bool te_first_chunk = !impl->te_frame_in_progress;
+    const bool te_last_chunk = lv_display_flush_is_last(disp);
+    impl->te_frame_in_progress = !te_last_chunk;
+    const size_t frame_bytes = (size_t)impl->cfg.base.profile.hor_res *
+                               impl->cfg.base.profile.ver_res * bridge_color_bytes(impl);
 
     /* Notify TE sync to start a new frame */
     if (impl->cfg.te_ctx && te_first_chunk) {
-        esp_lv_adapter_te_sync_begin_frame(impl->cfg.te_ctx, flush_size);
+        esp_lv_adapter_te_sync_begin_frame(impl->cfg.te_ctx, frame_bytes);
     }
 
     /* Wait for TE signal to avoid tearing (first chunk of a frame only) */
@@ -2365,7 +2357,7 @@ static void display_bridge_v9_flush_gpio_te(esp_lv_adapter_display_bridge_v9_t *
         (void)esp_lv_adapter_te_sync_wait_for_vsync(impl->cfg.te_ctx);
     }
 
-    if (impl->cfg.te_ctx) {
+    if (impl->cfg.te_ctx && te_first_chunk) {
         esp_lv_adapter_te_sync_record_tx_start(impl->cfg.te_ctx);
     }
 
@@ -2374,6 +2366,7 @@ static void display_bridge_v9_flush_gpio_te(esp_lv_adapter_display_bridge_v9_t *
     esp_err_t ret = esp_lcd_panel_draw_bitmap(panel_handle, offsetx1, offsety1, offsetx2 + 1, offsety2 + 1, color_map);
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "Draw bitmap failed: %s", esp_err_to_name(ret));
+        impl->te_frame_in_progress = false;
         if (impl->cfg.te_ctx) {
             esp_lv_adapter_te_sync_record_tx_done(impl->cfg.te_ctx);
         }
@@ -2383,7 +2376,7 @@ static void display_bridge_v9_flush_gpio_te(esp_lv_adapter_display_bridge_v9_t *
 
     /* Wait for transmission to complete */
     ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
-    if (impl->cfg.te_ctx) {
+    if (impl->cfg.te_ctx && te_last_chunk) {
         esp_lv_adapter_te_sync_record_tx_done(impl->cfg.te_ctx);
     }
 

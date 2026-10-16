@@ -1,12 +1,23 @@
 // Grok Gadgets protocol 0.1.0 client — see protocol/0.1.0/README.md in the SDK
-// (reference/grok-gadgets-esp32-sdk). LF-delimited JSON over USB Serial/JTAG;
-// the Mac-side `usb-bridge` relays frames to the gateway and supplies the token.
+// (reference/grok-gadgets-esp32-sdk). LF-delimited JSON over one of two
+// transports:
+//   USB  — USB Serial/JTAG; the Mac-side `usb-bridge` relays frames to the
+//          gateway and supplies the token (default, unprovisioned).
+//   Wi-Fi — LAN TLS to the gateway's --lan-listen port with a pinned CA;
+//          credentials live in NVS, written by `wifi-provision` over the USB
+//          console; the hello then carries the token itself.
 //
 // Session loop: hello -> poll every 200 ms (15 s idle closes the session).
 // A poll response may carry commands; each command is validated here, handed to
 // the LVGL task over a queue, and acked with the post-execution state snapshot.
 // Reconnect with capped backoff; never resend a physical action under a new ID.
+//
+// The USB port doubles as the provisioning console: JSON lines with
+// type status/provision/wifi_ssid/factory_reset are answered here and never reach the
+// session parser (gateway responses have no "type" field, so the two never
+// collide).
 #include "gadget.h"
+#include "gadget_wifi.h"
 
 #include <cstring>
 #include "cJSON.h"
@@ -14,14 +25,15 @@
 #include "esp_heap_caps.h"
 #include "esp_mac.h"
 #include "esp_random.h"
+#include "esp_system.h"
 #include "esp_timer.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
 #include "freertos/task.h"
 
-#define FIRMWARE_VERSION "0.2.0-gadget"
+#define FIRMWARE_VERSION "0.3.0-gadget-wifi"
 
-static constexpr int RX_BUF = 2208;   // protocol max frame 2048 + slack
+static constexpr int RX_BUF = 4608;   // console lines may reach 4096; gateway frames 2048
 static constexpr int TX_BUF = 2208;
 static constexpr uint32_t POLL_MS = 200;
 static constexpr uint32_t STATE_MS = 5000;    // state goes stale at 10 s on the gateway
@@ -44,6 +56,38 @@ static char s_boot_id[24];
 static uint32_t s_evt_seq = 0;
 static char s_dedup[DEDUP_LEN][68];
 static size_t s_dedup_n = 0;
+
+/* ------------------------------------------------ transport ----
+ * The session loop below is transport-blind; everything link-specific sits
+ * behind these two ops. read() returns bytes, 0 on timeout, <0 when the link
+ * is dead and the transport must be reopened (Wi-Fi only; USB never dies). */
+
+struct TransportOps {
+    bool (*write)(const char *buf, size_t len);
+    int (*read)(char *buf, size_t cap, uint32_t timeout_ms);
+};
+
+static TransportOps s_ops;
+static bool s_wifi_mode;
+static GadgetWifiCred s_cred;
+static bool s_tp_dead;   // set by a fatal read; session loop bails out
+
+static bool usb_write(const char *buf, size_t len)
+{
+    return usb_serial_jtag_write_bytes(buf, len, pdMS_TO_TICKS(200)) == (int)len;
+}
+
+static int usb_read(char *buf, size_t cap, uint32_t timeout_ms)
+{
+    return usb_serial_jtag_read_bytes(buf, cap, pdMS_TO_TICKS(timeout_ms < 100 ? timeout_ms : 100));
+}
+
+static int tls_read(char *buf, size_t cap, uint32_t timeout_ms)
+{
+    int n = gadget_wifi_transport_read(buf, cap, timeout_ms);
+    if (n < 0) s_tp_dead = true;
+    return n < 0 ? 0 : n;
+}
 
 /* ------------------------------------------------ public LVGL-side API ---- */
 
@@ -113,10 +157,13 @@ static void state_json(cJSON *root)
     cJSON_AddNumberToObject(bat, "percent", s.battery_pct);
     cJSON_AddBoolToObject(bat, "charging", s.battery_charging);
     cJSON_AddNumberToObject(st, "uptime_s", s.uptime_s);
+    // state allows extra fields (additionalProperties: true in the schema)
+    cJSON_AddStringToObject(st, "link", s_wifi_mode
+        ? (gadget_wifi_link_up() ? "wifi" : "wifi-down") : "usb");
 }
 
 // Capability list and schemas, kept terse: the whole hello frame must fit the
-// 2048-byte USB limit.
+// 2048-byte USB limit (TCP would allow 16384, but the frames are shared).
 static void add_capabilities(cJSON *dev)
 {
     cJSON *caps = cJSON_AddArrayToObject(dev, "capabilities");
@@ -152,7 +199,7 @@ static void add_capabilities(cJSON *dev)
     cJSON_AddItemToObject(schemas, "switched", ev("The character was switched by swipe"));
 }
 
-/* Send one frame. Returns false when serialization or the driver write fails. */
+/* Send one frame. Returns false when serialization or the transport write fails. */
 static bool send_frame(cJSON *root, char *buf, size_t cap)
 {
     // cJSON_PrintPreallocated returns a BOOL, not the length.
@@ -161,7 +208,7 @@ static bool send_frame(cJSON *root, char *buf, size_t cap)
     if (!printed) return false;
     size_t len = strlen(buf);
     buf[len] = '\n';
-    return usb_serial_jtag_write_bytes(buf, len + 1, pdMS_TO_TICKS(200)) == (int)len + 1;
+    return s_ops.write(buf, len + 1);
 }
 
 static bool send_hello(char *buf, size_t cap)
@@ -169,6 +216,9 @@ static bool send_hello(char *buf, size_t cap)
     cJSON *root = cJSON_CreateObject();
     cJSON_AddStringToObject(root, "type", "hello");
     cJSON_AddStringToObject(root, "protocol_version", "0.1.0");
+    if (s_wifi_mode)
+        cJSON_AddStringToObject(root, "token", s_cred.token);  // over USB the
+        // bridge supplies it; the LAN listener authenticates the device itself
     cJSON *dev = cJSON_AddObjectToObject(root, "device");
     cJSON_AddStringToObject(dev, "device_id", s_device_id);
     cJSON_AddStringToObject(dev, "model", "SmartRing-Plus grokbot");
@@ -227,6 +277,108 @@ static bool send_event(const GadgetEvent &e, char *buf, size_t cap)
     }
     cJSON_AddItemToObject(root, "data", data);
     return send_frame(root, buf, cap);
+}
+
+/* ------------------------------------------------ USB console ----
+ * `grok-gadgets-gateway wifi-provision` speaks one JSON line per command and
+ * expects one JSON line with an `ok` field back. Other lines are status text.
+ * The console never prints a stored secret. Replies always go to the USB port,
+ * in both modes. */
+
+static void console_reply(bool ok, const char *code, const char *message, bool include_wifi = false)
+{
+    char buf[512];
+    cJSON *root = cJSON_CreateObject();
+    cJSON_AddBoolToObject(root, "ok", ok);
+    cJSON_AddStringToObject(root, "device_id", s_device_id);
+    if (include_wifi) {
+        cJSON_AddStringToObject(root, "link", s_wifi_mode
+                               ? (gadget_wifi_link_up() ? "wifi" : "wifi-down") : "usb");
+        if (s_wifi_mode) cJSON_AddStringToObject(root, "ssid", s_cred.ssid);
+    }
+    if (!ok) {
+        cJSON *err = cJSON_AddObjectToObject(root, "error");
+        cJSON_AddStringToObject(err, "code", code);
+        cJSON_AddStringToObject(err, "message", message);
+    }
+    if (cJSON_PrintPreallocated(root, buf, (int)sizeof(buf) - 2, false)) {
+        size_t len = strlen(buf);
+        buf[len] = '\n';
+        usb_serial_jtag_write_bytes(buf, len + 1, pdMS_TO_TICKS(200));
+    }
+    cJSON_Delete(root);
+}
+
+// One shared reply for "accepted, rebooting into the new mode".
+static void console_reply_restart()
+{
+    console_reply(true, nullptr, nullptr);
+    vTaskDelay(pdMS_TO_TICKS(150));   // let the USB FIFO drain
+    esp_restart();
+}
+
+// Returns true when the line was a console command (consumed).
+static bool console_handle(cJSON *root)
+{
+    const cJSON *type = cJSON_GetObjectItemCaseSensitive(root, "type");
+    if (!cJSON_IsString(type)) return false;
+    const char *t = type->valuestring;
+
+    if (!strcmp(t, "status")) {
+        console_reply(true, nullptr, nullptr, true);
+        return true;
+    }
+    if (!strcmp(t, "wifi_ssid")) {
+        const cJSON *ssid = cJSON_GetObjectItemCaseSensitive(root, "ssid");
+        if (!s_wifi_mode || !cJSON_IsString(ssid) || !ssid->valuestring ||
+            !gadget_wifi_set_ssid(ssid->valuestring)) {
+            console_reply(false, "invalid_arguments", "requires saved Wi-Fi settings and a 1-32 byte SSID");
+        } else {
+            console_reply_restart();
+        }
+        return true;
+    }
+    if (!strcmp(t, "factory_reset")) {
+        gadget_wifi_erase();
+        console_reply_restart();   // reboots unprovisioned -> USB mode
+        return true;
+    }
+    if (!strcmp(t, "provision")) {
+        auto *c = static_cast<GadgetWifiCred *>(heap_caps_calloc(
+            1, sizeof(GadgetWifiCred), MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT));
+        if (!c) {
+            console_reply(false, "no_memory", "cannot allocate provisioning buffer");
+            return true;
+        }
+        auto str = [&](const char *key, char *dst, size_t cap) -> bool {
+            const cJSON *v = cJSON_GetObjectItemCaseSensitive(root, key);
+            if (!cJSON_IsString(v) || !v->valuestring) return false;
+            size_t n = strlen(v->valuestring);
+            if (n >= cap) return false;
+            memcpy(dst, v->valuestring, n + 1);
+            return true;
+        };
+        const cJSON *port = cJSON_GetObjectItemCaseSensitive(root, "port");
+        bool ok = str("ssid", c->ssid, sizeof(c->ssid)) && c->ssid[0] &&
+                  str("password", c->pass, sizeof(c->pass)) &&
+                  (c->pass[0] == 0 || strlen(c->pass) >= 8) &&
+                  str("token", c->token, sizeof(c->token)) && strlen(c->token) >= 16 &&
+                  str("host", c->host, sizeof(c->host)) && c->host[0] &&
+                  cJSON_IsNumber(port) && port->valuedouble >= 1 && port->valuedouble <= 65535 &&
+                  str("ca", c->ca, sizeof(c->ca)) && strstr(c->ca, "BEGIN CERTIFICATE");
+        if (ok) {
+            c->port = (uint16_t)port->valuedouble;
+            ok = gadget_wifi_save(*c);
+        }
+        heap_caps_free(c);
+        if (!ok) {
+            console_reply(false, "invalid_arguments", "provision fields missing or out of range");
+            return true;
+        }
+        console_reply_restart();   // reboots provisioned -> Wi-Fi mode
+        return true;
+    }
+    return false;
 }
 
 /* ------------------------------------------------ command handling ---- */
@@ -289,18 +441,19 @@ static void handle_command(const char *cmd_id, const char *capability, const cJS
 }
 
 /* ------------------------------------------------ session loop ----
- * Strictly synchronous: the bridge forwards one frame and waits for the
- * gateway reply before accepting the next, so the device mirrors that —
- * every request waits for its own response line before anything else is sent. */
+ * Strictly synchronous over either transport: every request waits for its own
+ * response line before anything else is sent (the USB bridge enforces the same
+ * shape, and the LAN listener answers one frame per request too). */
 
-// Read lines until one parses as JSON; returns it, or nullptr on timeout.
-// Non-JSON lines (ROM noise) are skipped inside the window.
+// Read lines until one parses as protocol JSON; returns it, or nullptr on
+// timeout / dead transport. Console lines are answered and consumed here;
+// noise lines (ROM output) are skipped inside the window.
 static cJSON *read_response(char *rx, size_t &rx_len, int64_t timeout_ms)
 {
     int64_t deadline = esp_timer_get_time() / 1000 + timeout_ms;
     for (;;) {
         int64_t left = deadline - esp_timer_get_time() / 1000;
-        if (left <= 0) return nullptr;
+        if (left <= 0 || s_tp_dead) return nullptr;
         char *lf = rx_len ? (char *)memchr(rx, '\n', rx_len) : nullptr;
         if (lf) {
             *lf = 0;
@@ -308,12 +461,17 @@ static cJSON *read_response(char *rx, size_t &rx_len, int64_t timeout_ms)
             size_t used = (size_t)(lf - rx) + 1;
             memmove(rx, rx + used, rx_len - used);
             rx_len -= used;
-            if (resp) return resp;
+            if (resp) {
+                if (console_handle(resp)) {   // console line: not a session frame
+                    cJSON_Delete(resp);
+                    continue;
+                }
+                return resp;
+            }
             continue;  // noise line: keep waiting within the same window
         }
         if (rx_len >= RX_BUF - 1) rx_len = 0;  // overlong garbage line: reset
-        int n = usb_serial_jtag_read_bytes(rx + rx_len, RX_BUF - 1 - rx_len,
-                                           pdMS_TO_TICKS(left < 100 ? left : 100));
+        int n = s_ops.read(rx + rx_len, RX_BUF - 1 - rx_len, (uint32_t)(left < 100 ? left : 100));
         if (n > 0) rx_len += n;
     }
 }
@@ -345,18 +503,9 @@ static bool handle_response(cJSON *resp, bool &session, int64_t &last_response, 
     return true;
 }
 
-static void gadget_task(void *)
+// Run hello/poll/ack/event rounds until the session or the transport dies.
+static void session_loop(char *tx, char *rx)
 {
-    char *tx = (char *)heap_caps_malloc(TX_BUF, MALLOC_CAP_8BIT);
-    char *rx = (char *)heap_caps_malloc(RX_BUF, MALLOC_CAP_8BIT);
-    configASSERT(tx && rx);
-
-    usb_serial_jtag_driver_config_t cfg = {
-        .tx_buffer_size = TX_BUF,
-        .rx_buffer_size = RX_BUF,
-    };
-    ESP_ERROR_CHECK(usb_serial_jtag_driver_install(&cfg));
-
     uint32_t backoff_ms = 1000;
     size_t rx_len = 0;
     bool session = false;
@@ -365,6 +514,7 @@ static void gadget_task(void *)
 
     for (;;) {
         int64_t now = esp_timer_get_time() / 1000;
+        if (s_tp_dead) return;
 
         if (!session) {
             // The hello may go nowhere when no host is attached; only an ok
@@ -382,15 +532,14 @@ static void gadget_task(void *)
                     continue;
                 }
             }
+            if (s_tp_dead) return;
             vTaskDelay(pdMS_TO_TICKS(backoff_ms));
             backoff_ms = backoff_ms < 8000 ? backoff_ms * 2 : 8000;
             continue;
         }
 
         if (now - last_response > 12000) {
-            session = false;   // host detached or bridge died: re-hello
-            backoff_ms = 1000;
-            continue;
+            return;   // host detached, bridge died or TLS went silent: reopen
         }
 
         /* TX one frame per round-trip: acks and events first, then the state
@@ -426,6 +575,69 @@ static void gadget_task(void *)
     }
 }
 
+// In Wi-Fi mode the USB port is console-only; this task answers provisioning
+// lines there while the session runs on TLS.
+static void console_task(void *)
+{
+    char *rx = (char *)heap_caps_malloc(RX_BUF, MALLOC_CAP_8BIT);
+    configASSERT(rx);
+    size_t rx_len = 0;
+    for (;;) {
+        char *lf = rx_len ? (char *)memchr(rx, '\n', rx_len) : nullptr;
+        if (lf) {
+            *lf = 0;
+            cJSON *line = cJSON_Parse(rx);
+            size_t used = (size_t)(lf - rx) + 1;
+            memmove(rx, rx + used, rx_len - used);
+            rx_len -= used;
+            if (line) {
+                console_handle(line);
+                cJSON_Delete(line);
+            }
+            continue;
+        }
+        if (rx_len >= RX_BUF - 1) rx_len = 0;
+        int n = usb_serial_jtag_read_bytes(rx + rx_len, RX_BUF - 1 - rx_len, pdMS_TO_TICKS(200));
+        if (n > 0) rx_len += n;
+    }
+}
+
+static void gadget_task(void *)
+{
+    char *tx = (char *)heap_caps_malloc(TX_BUF, MALLOC_CAP_8BIT);
+    char *rx = (char *)heap_caps_malloc(RX_BUF, MALLOC_CAP_8BIT);
+    configASSERT(tx && rx);
+
+    usb_serial_jtag_driver_config_t cfg = {
+        .tx_buffer_size = TX_BUF,
+        .rx_buffer_size = RX_BUF,
+    };
+    ESP_ERROR_CHECK(usb_serial_jtag_driver_install(&cfg));
+
+    s_wifi_mode = gadget_wifi_load(s_cred);
+    if (s_wifi_mode)
+        xTaskCreate(console_task, "gadget_console", 4096, nullptr, 4, nullptr);
+
+    uint32_t backoff_ms = 1000;
+    for (;;) {
+        s_tp_dead = false;
+        if (s_wifi_mode) {
+            if (!gadget_wifi_transport_open(s_cred)) {
+                vTaskDelay(pdMS_TO_TICKS(backoff_ms));
+                backoff_ms = backoff_ms < 15000 ? backoff_ms * 2 : 15000;
+                continue;
+            }
+            backoff_ms = 1000;
+            s_ops = {gadget_wifi_transport_write, tls_read};
+        } else {
+            s_ops = {usb_write, usb_read};
+        }
+        session_loop(tx, rx);
+        if (s_wifi_mode) gadget_wifi_transport_close();
+        vTaskDelay(pdMS_TO_TICKS(500));   // brief pause before re-hello/reopen
+    }
+}
+
 void gadget_start()
 {
     s_cmd_q = xQueueCreate(4, sizeof(GadgetCommand));
@@ -441,5 +653,5 @@ void gadget_start()
     snprintf(s_boot_id, sizeof(s_boot_id), "boot-%08lx%08lx",
              (unsigned long)esp_random(), (unsigned long)esp_random());
 
-    xTaskCreate(gadget_task, "gadget", 6144, nullptr, 5, nullptr);
+    xTaskCreate(gadget_task, "gadget", 8192, nullptr, 5, nullptr);
 }

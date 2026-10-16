@@ -20,8 +20,7 @@
 
 static const char *TAG = "bsp";
 
-/* SPI 总线单次传输上限按整屏 RGB565 预留（适配器默认条带高度可为整屏） */
-#define LCD_SPI_MAX_TRANSFER_LINES  BOARD_LCD_V_RES
+#define LCD_DRAW_BUFFER_LINES 40
 
 static i2c_master_bus_handle_t s_i2c_bus;
 static esp_lcd_touch_handle_t s_tp;
@@ -69,7 +68,7 @@ static esp_err_t lcd_init(esp_lcd_panel_io_handle_t *out_io, esp_lcd_panel_handl
     const spi_bus_config_t buscfg = ST77916_PANEL_BUS_QSPI_CONFIG(
         BOARD_LCD_QSPI_SCL_IO, BOARD_LCD_QSPI_D0_IO, BOARD_LCD_QSPI_D1_IO,
         BOARD_LCD_QSPI_D2_IO, BOARD_LCD_QSPI_D3_IO,
-        BOARD_LCD_H_RES * LCD_SPI_MAX_TRANSFER_LINES * sizeof(uint16_t));
+        BOARD_LCD_H_RES * LCD_DRAW_BUFFER_LINES * sizeof(uint16_t));
     ESP_RETURN_ON_ERROR(spi_bus_initialize(BOARD_LCD_SPI_HOST, &buscfg, SPI_DMA_CH_AUTO),
                         TAG, "spi bus init failed");
 
@@ -160,19 +159,12 @@ esp_err_t bsp_display_init(void)
     esp_lv_adapter_config_t adapter_cfg = ESP_LV_ADAPTER_DEFAULT_CONFIG();
     ESP_RETURN_ON_ERROR(esp_lv_adapter_init(&adapter_cfg), TAG, "lvgl adapter init failed");
 
-    /* QSPI + PSRAM：适配器 OTHER 接口在 RGB565 flush 时自动字节交换，匹配本屏 */
-    esp_lv_adapter_display_config_t disp_cfg = ESP_LV_ADAPTER_DISPLAY_SPI_WITH_PSRAM_DEFAULT_CONFIG(
+    /* Keep the DMA draw buffer in internal RAM; the animation canvas lives in PSRAM. */
+    esp_lv_adapter_display_config_t disp_cfg = ESP_LV_ADAPTER_DISPLAY_SPI_WITHOUT_PSRAM_DEFAULT_CONFIG(
         panel, io, BOARD_LCD_H_RES, BOARD_LCD_V_RES, ESP_LV_ADAPTER_ROTATE_0);
-    /* [local patch] Strip buffers in internal RAM instead of PSRAM: the canvas lives in PSRAM,
-     * so each flush block needs only one PSRAM-read -> internal-write copy plus an in-place
-     * byte swap in internal RAM, and the TX buffer is DMA-direct without an SPI bounce copy.
-     * ~6ms -> ~2ms per block, ~58ms -> ~26ms for the whole frame pipeline. */
-    disp_cfg.profile.use_psram = false;
-    disp_cfg.profile.buffer_height = 40;
-    /* [local patch] TE hardware sync against tearing: the TE pin is wired to GPIO38 on the
-     * board, and TEON(0x35) is issued at the end of the init table. Flush starts after the
-     * TE rising edge so writes always stay ahead of the scan beam, eliminating the tearing
-     * steps on moving edges. */
+    disp_cfg.profile.buffer_height = LCD_DRAW_BUFFER_LINES;
+    /* TEON(0x35) enables GPIO38. The bridge gates the first strip of each frame
+     * on TE; the remaining strips stream without waiting for another frame. */
     disp_cfg.tear_avoid_mode = ESP_LV_ADAPTER_TEAR_AVOID_MODE_TE_SYNC;
     disp_cfg.te_sync = (esp_lv_adapter_te_sync_config_t){
         .gpio_num       = BOARD_LCD_TE_IO,

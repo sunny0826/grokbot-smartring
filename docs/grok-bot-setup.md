@@ -3,6 +3,10 @@
 > 2026-10-16 — SmartRing-Plus（ESP32-S3）通过 grok-gadgets-gateway 接入 Grok Bot 的
 > 完整部署与运维说明。全链路已验证：Grok Bot 远程命令 executed、物理事件实时到达网关。
 
+文中的 `gadget.example.com`、`TUNNEL_ID`、`DEVICE_ID`、`GATEWAY_LAN_IP`
+和 `/dev/cu.usbmodemXXXX` 均为示例占位符，使用前替换为本机配置。
+密码、令牌、证书和运行日志仅保存在本机，不提交到仓库。
+
 ## 架构
 
 ```
@@ -107,7 +111,7 @@ tail -5 ~/grok-gadgets-requests.jsonl
 
 1. **本机代理**：所有网关 CLI 和本地 HTTP 脚本必须前缀 `NO_PROXY="localhost,127.0.0.1,::1"`。
    只写 `localhost,127.0.0.1` 不含 `[::1]` 会让其依赖 httpx2 直接崩溃。
-2. **串口节点会变**：设备每次复位/重插，macOS 可能重新编号（`cu.usbmodemXXXX` → `cu.usbmodemXXXX`）。
+2. **串口节点会变**：设备每次复位/重插，macOS 可能重新编号。
    桥接起不来先 `ls /dev/cu.usbmodem*`。
 3. **serve 重启后桥接不一定重连**：重启 serve 后检查 `lsof -nP -iTCP:8764` 有无 ESTABLISHED，
    没有就重启桥接。杀桥接要杀 python 子进程，包装进程杀了会留孤儿占串口。
@@ -126,6 +130,31 @@ tail -5 ~/grok-gadgets-requests.jsonl
 
 - **未注册开机自启**：serve/隧道/桥接都是手动进程，重启电脑后按上文顺序拉起。
   如需自启：网关自带 `service` 子命令（launchd），cloudflared 有 `cloudflared service install`。
-- **Wi-Fi 传输未实现**：设备目前必须插 USB。协议支持 LAN TLS（`lan-cert` + `--lan-listen`，
-  设备需 `wifi-provision`），但仅限局域网；TCP 远程传输协议侧尚未实现。
+- **Wi-Fi 链路已验证，独立供电测试待完成**：通过 `wifi-provision` 写入配置，
+  使用 LAN TLS 连接 `serve --lan-listen`。2026-10-16 修正 SSID 拼写后，设备获取 IP，
+  并建立到 `GATEWAY_LAN_IP:8767` 的 TLS 连接。legacy / modern MCP 的
+  `animation.trigger` 均返回 `executed`，设备状态为 `link: wifi`。
+  本次仍由 USB 供电；尚未验证改接充电器后的运行，也未目视确认动画效果。
 - `firmware/smartring-gadget/` 是 PlatformIO 最小验证草图（中间产物，留作参考）。
+
+## Wi-Fi 诊断补充（2026-10-16）
+
+- USB `status` 回复包含 `link`（usb / wifi-down / wifi）和已配置的 `ssid`，
+  不返回密码、设备令牌或证书。`wifi_ssid` 命令接受 `ssid`，只更新网络名称并重启，
+  保留其余配网字段；仅在已有完整配网配置时允许使用。
+- 配网结构原来占用 `console_handle` 的 3,600 字节栈帧，导致 4 KB
+  `gadget_console` 在处理请求时溢出。将临时凭据移到 PSRAM 后，栈帧降为 48 字节。
+  处理完请求即释放临时缓冲。
+- Wi-Fi 断开日志包含原因码。每次启动后的首次连接失败会扫描一次，仅记录 AP
+  数量、目标匹配数量及目标的信道/信号/认证方式，不打印其他网络名称或凭据。
+  本次 `WIFI_REASON_NO_AP_FOUND`（201）由目标 SSID 拼写错误引起，修正后即连接成功。
+- 本机存在 SOCKS 代理环境变量时，`NO_PROXY` 仍可能触发 httpx2 的
+  `socksio` 缺失错误，CLI 会将它概括成“网关未响应”。本地验证命令可临时清除代理：
+
+```bash
+env -u ALL_PROXY -u all_proxy -u HTTP_PROXY -u http_proxy \
+  -u HTTPS_PROXY -u https_proxy \
+  .venv-grok/bin/grok-gadgets-gateway rehearse \
+  --device DEVICE_ID \
+  --command animation.trigger --args '{"name":"happy"}'
+```

@@ -9,6 +9,21 @@ CONFIG_COMPILER_OPTIMIZATION_PERF=y
 CONFIG_FREERTOS_HZ=1000
 # Measured 16MB flash on this unit
 CONFIG_ESPTOOLPY_FLASHSIZE_16MB=y
+# Wi-Fi + mbedTLS pushed the image past 1 MB; the 16 MB flash has room for the
+# large single-app layout (~2 MB app partition).
+CONFIG_PARTITION_TABLE_SINGLE_APP_LARGE=y
+# Reserve internal RAM for display DMA and the Wi-Fi/TLS stack:
+# movable .bss goes to PSRAM, Wi-Fi static RX pool shrinks to 4 (the gadget
+# protocol is 200 ms polls of ≤2 KB frames — a small pool is plenty), and the
+# LAN link is IPv4-only.
+CONFIG_SPIRAM_ALLOW_BSS_SEG_EXTERNAL_MEMORY=y
+CONFIG_ESP32_WIFI_STATIC_RX_BUFFER_NUM=4
+CONFIG_LWIP_IPV6=n
+# IRAM and DRAM share the same physical SRAM banks on the S3: pushing the Wi-Fi
+# and lwIP hot paths back to flash leaves more DRAM for DMA and networking.
+CONFIG_ESP32_WIFI_IRAM_OPT=n
+CONFIG_ESP32_WIFI_RX_IRAM_OPT=n
+CONFIG_LWIP_IRAM_OPTIMIZATION=n
 # The gadget protocol owns the USB Serial/JTAG port (LF-delimited JSON); the
 # secondary console would corrupt the frame stream. Logs stay on UART0 (primary).
 CONFIG_ESP_CONSOLE_SECONDARY_NONE=y

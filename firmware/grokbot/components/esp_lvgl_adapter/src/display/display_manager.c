@@ -957,6 +957,12 @@ static bool display_manager_init_node(esp_lv_adapter_display_node_t *node)
 
     size_t buf_bytes = display_manager_calc_draw_buf_bytes(&pub->profile, cfg->draw_buf_pixels, color_format);
 
+    ESP_LOGI(TAG, "draw buffers: mode=%s, bytes=%zu, count=%u, memory=%s",
+             render_mode == ESP_LV_ADAPTER_DISPLAY_RENDER_MODE_FULL ? "full" :
+             render_mode == ESP_LV_ADAPTER_DISPLAY_RENDER_MODE_DIRECT ? "direct" : "partial",
+             buf_bytes, cfg->draw_buf_secondary ? 2U : 1U,
+             pub->profile.use_psram ? "PSRAM" : "internal");
+
     lv_display_set_buffers(disp,
                            cfg->draw_buf_primary,
                            cfg->draw_buf_secondary,
@@ -1871,8 +1877,12 @@ static esp_lv_adapter_display_render_mode_t display_manager_pick_render_mode(con
     switch (cfg->base.tear_avoid_mode) {
     case ESP_LV_ADAPTER_TEAR_AVOID_MODE_DOUBLE_FULL:
     case ESP_LV_ADAPTER_TEAR_AVOID_MODE_TRIPLE_FULL:
-    case ESP_LV_ADAPTER_TEAR_AVOID_MODE_TE_SYNC:
         return ESP_LV_ADAPTER_DISPLAY_RENDER_MODE_FULL;
+    case ESP_LV_ADAPTER_TEAR_AVOID_MODE_TE_SYNC:
+        /* TE controls when a frame starts, not how much RAM each strip needs. */
+        return cfg->base.profile.buffer_height > 0 &&
+               cfg->base.profile.buffer_height < cfg->base.profile.ver_res ?
+               ESP_LV_ADAPTER_DISPLAY_RENDER_MODE_PARTIAL : ESP_LV_ADAPTER_DISPLAY_RENDER_MODE_FULL;
     case ESP_LV_ADAPTER_TEAR_AVOID_MODE_DOUBLE_DIRECT:
         return ESP_LV_ADAPTER_DISPLAY_RENDER_MODE_DIRECT;
     default:

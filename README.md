@@ -34,9 +34,12 @@ tie, after `reference/character-ref-2.png`), does the same.
   spherical gaze, blink schedule and idle carousel
 - **Upright head (pika, rowlet)** — the face counter-rotates against gravity so it always
   faces world-up while the body rolls downhill
-- **Tear-free pipeline** — TE-hardware-synced flush (ST77916 TE line on GPIO38),
-  internal-RAM strip buffers, measured-wall-time physics step. ~28 fps measured,
-  no tearing, no edge crawl
+- **Status icons** — a top bar shows Wi-Fi association (green online, gray slash
+  offline), battery level and percentage, and a charging bolt. Updates once per
+  second; low battery (20% or less) is red, unavailable readings show `--%`.
+  The Wi-Fi icon indicates the access-point connection, not gateway availability.
+- **TE-synchronized pipeline** — ST77916 TE line on GPIO38, one 28.8 KB
+  internal-RAM draw buffer, bounded SPI transfers, measured-wall-time physics step
 
 ## Hardware
 
@@ -58,7 +61,7 @@ export PATH="$HOME/.espressif/python_env/idf5.5_py3.14_env/bin:$PATH"
 
 cd firmware/grokbot
 idf.py build
-idf.py -p /dev/cu.usbmodem101 flash monitor   # device enumerates as USB-Serial/JTAG
+idf.py -p /dev/cu.usbmodemXXXX flash monitor   # device enumerates as USB-Serial/JTAG
 ```
 
 After editing `sdkconfig.defaults`, force regeneration:
@@ -70,6 +73,7 @@ After editing `sdkconfig.defaults`, force regeneration:
 firmware/grokbot/           ESP-IDF firmware project
 ├── main/
 │   ├── main.cpp            Physics, carousel driver, LVGL canvas glue
+│   ├── status_bar.*        Wi-Fi and battery indicators above the character canvas
 │   ├── bot_render.*        RGB565 software rasterizer (ellipse/capsule/poly/arc, 2 px AA)
 │   ├── bot_face.*          Spherical eye projection + liveliness (blink, gaze drift)
 │   ├── bot_states.*        Idle/thinking/notify/orbit poses (ported from bloub)
@@ -87,7 +91,7 @@ firmware/grokbot/           ESP-IDF firmware project
 ├── sdkconfig.defaults      240 MHz, perf optimizations, 16 MB flash, 1000 Hz tick
 └── dependencies.lock       Registry deps (managed_components/ is regenerated)
 docs/
-├── display-pipeline-notes.md   Post-mortem: 5 root causes from jank to 28 fps tear-free
+├── display-pipeline-notes.md   Display debugging history and Wi-Fi/DMA memory regression
 └── board-guide.html            VIEWE board & toolchain onboarding notes (Chinese)
 reference/                  Third-party sources (git-ignored) + character-ref.png (pika design)
                             + character-ref-2.png (rowlet design)
@@ -114,10 +118,13 @@ Full measurements and debugging recipes: [docs/display-pipeline-notes.md](docs/d
 | Layer | Root cause | Fix |
 |---|---|---|
 | Math | newlib `sqrtf`/`hypotf` are soft-float (~100 cycles) | squared-distance tests, Taylor edge approximation |
-| Buffering | self-maintained dirty rect vs. alternating strip buffers → ghosting | invalidate whole canvas; LVGL syncs both buffers |
+| Buffering | incomplete invalidation leaves old pixels on the panel | invalidate the whole canvas |
 | Coverage | 1 px hard AA band + truncating RGB565 blend | 2 px smoothstep band + rounded blending |
 | Sync | DMA writes race panel scan → tearing steps on moving edges | ST77916 TE output (cmd 0x35) + adapter `TE_SYNC` on GPIO38 |
 | Throughput | adapter waited for vsync per 40-row strip (8×/frame → 12 fps) + PSRAM strip copies | patch: wait once per frame; strips moved to internal RAM (~58 → 35 ms/frame) |
+| Wi-Fi memory regression | TE_SYNC forced a 259,200-byte full buffer; PSRAM fallback still needed internal DMA memory | honor the 40-row partial buffer; use one 28,800-byte internal buffer and bounded SPI transfers |
+
+Timing figures above are historical; see the notes for current firmware verification.
 
 Physics uses measured wall-time `dt` (clamped 4–50 ms) because TE gating makes the
 real frame rate float — fixed-step dt would warp motion speed.

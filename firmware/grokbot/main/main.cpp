@@ -18,6 +18,7 @@
 #include "bot_states.h"
 #include "bot_character.h"
 #include "gadget.h"
+#include "status_bar.h"
 
 static const char *TAG = "grokbot";
 
@@ -369,9 +370,7 @@ static void frame_cb(lv_timer_t *)
     character_draw(cp);
     int64_t tPoly = esp_timer_get_time();
 
-    // Invalidate the whole canvas: with double-buffered draw strips, self-maintained dirty rects
-    // cannot keep both buffers consistent (root cause of ghosting).
-    // Rasterization is optimized to ~10ms, so a full-area flush fits the frame budget.
+    // Flush the whole canvas so pixels cleared at the character's old position reach the panel.
     lv_obj_invalidate(s_canvas);
     s_prev = cur;
 
@@ -557,6 +556,9 @@ static void gadget_publish()
 
 extern "C" void app_main(void)
 {
+    ESP_LOGI(TAG, "internal heap before display: free=%u largest=%u",
+             (unsigned)heap_caps_get_free_size(MALLOC_CAP_INTERNAL),
+             (unsigned)heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL));
     ESP_ERROR_CHECK(bsp_display_init());  // I2C + touch + LCD + LVGL + backlight
     s_imu_ok = (bsp_imu_init() == ESP_OK);
     if (!s_imu_ok) ESP_LOGW(TAG, "IMU init failed, gravity animation degraded to static mode");
@@ -585,6 +587,7 @@ extern "C" void app_main(void)
     lv_obj_add_event_cb(scr, touch_cb, LV_EVENT_PRESSING, NULL);
     lv_obj_add_event_cb(scr, touch_cb, LV_EVENT_RELEASED, NULL);
 
+    status_bar_create(scr, s_bat_ok);
     lv_timer_create(frame_cb, 16, NULL);  // ~60 fps, matching the TE-gated panel refresh rate
     esp_lv_adapter_unlock();
 

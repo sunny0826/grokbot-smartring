@@ -31,3 +31,18 @@ firmware/grokbot/sim/sim
 firmware/grokbot/sim/sim_dbg
 firmware/grokbot/sim/out/
 *.dSYM/
+
+# Local credentials and operational logs
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.token
+mcp-token
+credentials.json
+.cloudflared/
+*.log
+grok-gadgets-requests*.jsonl
