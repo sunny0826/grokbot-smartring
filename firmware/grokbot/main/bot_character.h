@@ -69,3 +69,6 @@ void skin_draw_badge(CharacterDrawParams &p);
 // eyeW/eyeH = full eye size in ball-radius units.
 void skin_draw_eyes(CharacterDrawParams &p, float t11, float t12, float t21, float t22,
                     float splitDeg, float eyeW, float eyeH, uint16_t color565);
+// Sleepy state's Zzz bubbles: three ink Z's floating up off the head, animated
+// by p.localT, opacity from pose.zzzA
+void skin_draw_zzz(CharacterDrawParams &p);

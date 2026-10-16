@@ -16,8 +16,12 @@ skin, `pika` (yellow blob with capsule eyes and red cheeks, after
 
 - **Gravity physics** — tilt to roll, circular boundary with restitution bounce,
   velocity-aligned jelly squash, gaze follows the downhill direction
-- **Idle carousel** — after 1.5 s lying flat: `idle → thinking → idle → notify → idle → orbit`,
-  with 0.4–0.6 s pose morphs and blink-masked transitions; any tilt exits instantly
+- **Idle carousel** — after 1.5 s lying flat: `idle → thinking → idle → happy → idle →
+  notify → idle → orbit → idle → sleepy` (two-hop joy with landing squash, shut-eye
+  sleep with floating Zzz bubbles), 0.35–0.6 s pose morphs and blink-masked
+  transitions; any tilt exits instantly
+- **Shake = dizzy** — a quick shake (tilt jerk > 30 m/s²/s) triggers a 1.8 s dizzy
+  spell: X-cross eyes, spiralling gaze, wobbling body; works in any orientation
 - **Poke** — tapping the screen kicks the bot against gravity and forces a blink
 - **Character switch** — swipe left/right on the screen to cycle skins. Ships with
   `grokbot` (the bloub port) and `pika` (flat yellow blob, capsule eyes, round red
@@ -117,7 +121,8 @@ real frame rate float — fixed-step dt would warp motion speed.
 Physics constants in `main/main.cpp`: `ACC` (gravity gain), `DAMP`, `RESTIT`
 (bounce), `PMAX` (travel limit), `SCALE` (bot radius px), `CANVAS` (320).
 Carousel timing/thresholds: `CAROUSEL[]` in `main/bot_states.cpp`,
-flat-detection thresholds in `main.cpp` (`gm < 1.1` enter, `gm > 2.0` exit).
+flat-detection thresholds in `main.cpp` (`gm < 1.1` enter, `gm > 2.0` exit),
+shake threshold `s_jerk > 30` (watch the `jerk` value in the serial log to tune).
 New skins: implement `foo_draw(CharacterDrawParams &)` and register it in
 `CHARACTERS[]` in `main/bot_character.cpp`; pika's cheek geometry (sphere az/el,
 radius) lives in `draw_cheeks` in `main/bot_character_pika.cpp`. Swipe/poke

@@ -64,6 +64,13 @@ static bool s_prevValid = false;
 static float s_morphT = 0;         // time since entering current state
 static bool s_blinkIn = false;     // mask the transition with a blink on entry
 
+/* ---- Shake -> dizzy: high-pass on the tilt vector (jerk), with a cooldown ---- */
+static float s_pgx = 0, s_pgy = 0;   // previous frame tilt
+static float s_jerk = 0;             // smoothed tilt jerk (m/s^2 per s)
+static float s_dizzy = 0;            // remaining dizzy time (seconds)
+static float s_dizzyT = 0;           // local time inside dizzy
+static float s_lastDizzy = -10.f;    // last dizzy trigger (cooldown)
+
 /* ------------------------------------------------ Frame callback */
 
 static void frame_cb(lv_timer_t *)
@@ -83,6 +90,22 @@ static void frame_cb(lv_timer_t *)
     float gx = 0, gy = 0;
     if (s_imu_ok) bsp_imu_get_tilt(&gx, &gy);
     float gm = hypotf(gx, gy);
+
+    /* ---- Shake detection: jerk on the (EMA-filtered) tilt vector. The BSP filter
+     * smooths slow motion, so only a real shake pushes the jerk over the threshold. */
+    float jerk = hypotf(gx - s_pgx, gy - s_pgy) / dt;
+    s_pgx = gx;
+    s_pgy = gy;
+    s_jerk += (jerk - s_jerk) * (1.f - expf(-dt / 0.15f));
+    if (s_dizzy <= 0.f && s_jerk > 30.f && s_t - s_lastDizzy > 5.f) {
+        s_dizzy = 1.8f;
+        s_dizzyT = 0.f;
+        s_lastDizzy = s_t;
+        s_prevPose = s_pose;  // morph into the dizzy pose
+        s_prevValid = true;
+        s_morphT = 0;
+        ESP_LOGI(TAG, "shake! dizzy (jerk %.1f)", s_jerk);
+    }
 
     /* ---- Physics: spring-damped rolling + circular boundary bounce; carousel pulls back to center ---- */
     if (s_carousel) {
@@ -190,7 +213,17 @@ static void frame_cb(lv_timer_t *)
         s_blinkIn = false;  // entering/leaving the carousel itself does not blink
     }
     BotPose live;
-    if (s_carousel) {
+    if (s_dizzy > 0.f) {
+        // Shake reaction overrides everything; the body keeps rolling physically
+        s_dizzy -= dt;
+        s_dizzyT += dt;
+        poseFor(BotState::Dizzy, s_dizzyT, live);
+        if (s_dizzy <= 0.f) {
+            s_prevPose = s_pose;  // morph back out
+            s_prevValid = true;
+            s_morphT = 0;
+        }
+    } else if (s_carousel) {
         s_localT += dt;
         const StateDefC &def = CAROUSEL[s_csIdx];
         if (s_localT >= def.duration) {
@@ -223,6 +256,8 @@ static void frame_cb(lv_timer_t *)
         float blinkLid = fabsf(2.f * morphK - 1.f);
         if (blinkLid < lid) lid = blinkLid;
     }
+    // Pose-driven eye closure (happy/sleepy) stacks on top of the blink lid
+    lid = fminf(lid, 1.f - s_pose.eyeClose);
     gaze = { s_pose.gaze.yaw, s_pose.gaze.pitch, s_pose.gaze.roll };
 
     /* ---- Render. Gravity mode takes the dirty-rect fast path; the carousel has sparse
@@ -235,17 +270,20 @@ static void frame_cb(lv_timer_t *)
 
     float cx0 = CANVAS / 2.f, cy0 = CANVAS / 2.f;
     float ox = s_px + lv.driftX, oy = s_py + lv.driftY;
+    // Squash = impact/velocity squash + pose-driven squash (happy landings; vertical)
+    float squashAll = s_squash + s_pose.squashAdd;
+    float squashDir = s_squash > 0.03f ? s_squash_dir : 1.5707963f;
     // Squash along the impact/velocity direction: short axis along impact, long axis perpendicular
-    float sq = 1.f - 0.22f * s_squash, st = (1.f + 0.16f * s_squash) * lv.breath;
+    float sq = 1.f - 0.22f * squashAll, st = (1.f + 0.16f * squashAll) * lv.breath;
     // Pose body offset/radius stack on top of the gravity offset (~0 during carousel)
     float rcx = cx0 + (ox + s_pose.bodyCx) * SCALE;
     float rcy = cy0 + (oy + s_pose.bodyCy) * SCALE;
     float erx = st * SCALE * s_pose.bodyR;               // long semi-axis (perpendicular to impact)
     float ery = sq * SCALE * s_pose.bodyR;               // short semi-axis (along impact)
-    float erot = s_squash_dir + 3.14159265f / 2.f;       // ellipse rot aligns with the long axis
+    float erot = squashDir + 3.14159265f / 2.f;          // ellipse rot aligns with the long axis
 
-    // Squash as a screen-space 2x2 transform M = R(theta)·S(st,sq)·R(-theta), theta = s_squash_dir
-    float cr = cosf(s_squash_dir), sr = sinf(s_squash_dir);
+    // Squash as a screen-space 2x2 transform M = R(theta)·S(st,sq)·R(-theta), theta = squashDir
+    float cr = cosf(squashDir), sr = sinf(squashDir);
     float m11 = st * cr * cr + sq * sr * sr;
     float m12 = cr * sr * (st - sq);
     float m22 = st * sr * sr + sq * cr * cr;
@@ -336,7 +374,8 @@ static void frame_cb(lv_timer_t *)
     static int logDiv = 0;
     if (++logDiv >= 60) {
         logDiv = 0;
-        ESP_LOGI(TAG, "tilt gx=%.2f gy=%.2f | pos %.2f,%.2f | mix %.2f", gx, gy, s_px, s_py, s_mix);
+        ESP_LOGI(TAG, "tilt gx=%.2f gy=%.2f | pos %.2f,%.2f | mix %.2f | jerk %.1f", gx, gy, s_px,
+                 s_py, s_mix, s_jerk);
     }
 }
 

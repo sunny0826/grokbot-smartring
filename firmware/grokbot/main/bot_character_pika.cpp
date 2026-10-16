@@ -69,5 +69,6 @@ void pika_draw(CharacterDrawParams &p)
     // positions ride the upright-rotated frame, pupils gaze downhill
     skin_draw_eyes(p, t.t11, t.t12, t.t21, t.t22, EYE_SPLIT, EYE_W, EYE_H, PIKA_BLACK);
 
+    skin_draw_zzz(p);
     skin_draw_rings_front(p);
 }

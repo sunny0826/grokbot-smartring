@@ -30,10 +30,14 @@ const ArcSeed RING_SEEDS[6] = {
 const StateDefC CAROUSEL[] = {
     { BotState::Idle,     2.4f, 0.45f, false },
     { BotState::Thinking, 2.6f, 0.40f, true  },
+    { BotState::Idle,     2.0f, 0.45f, false },
+    { BotState::Happy,    1.8f, 0.35f, true  },
     { BotState::Idle,     2.4f, 0.45f, false },
     { BotState::Notify,   2.2f, 0.50f, true  },
     { BotState::Idle,     2.4f, 0.45f, false },
     { BotState::Orbit,    3.4f, 0.60f, false },
+    { BotState::Idle,     2.0f, 0.45f, false },
+    { BotState::Sleepy,   4.2f, 0.60f, true  },
 };
 const int CAROUSEL_LEN = sizeof(CAROUSEL) / sizeof(CAROUSEL[0]);
 
@@ -54,9 +58,11 @@ static void basePose(BotPose &o)
     o.split = EYE_SPLIT;
     o.eyeW = EYE_W; o.eyeH = EYE_H;
     o.eyeAlpha = 1.f;
+    o.eyeClose = 0; o.eyeX = 0; o.squashAdd = 0;
     o.dotX[0] = o.dotX[1] = 0; o.dotR[0] = o.dotR[1] = 0; o.dotA[0] = o.dotA[1] = 0;
     o.notifX = o.notifY = 0; o.notifR = 0; o.notifA = 0;
     o.ringA = 0;
+    o.zzzA = 0;
 }
 
 void poseFor(BotState s, float t, BotPose &o)
@@ -116,6 +122,40 @@ void poseFor(BotState s, float t, BotPose &o)
         o.ringA = clampf(t / 0.8f) * clampf((3.6f - t) / 0.9f);
         break;
     }
+
+    case BotState::Happy: {
+        // Two hops over the 1.8 s hold: body rises on a sine arc, and lands with a
+        // sharp vertical squash pulse (cos^8 peaks at the arc ends)
+        float k = fmodf(t, 0.9f) / 0.9f;
+        o.bodyCy = -0.20f * sinf(k * 3.14159265f);
+        float cs = cosf(k * 3.14159265f);
+        float cs2 = cs * cs, cs4 = cs2 * cs2;
+        o.squashAdd = 0.4f * cs4 * cs4;
+        o.eyeClose = 1.f;  // joy = eyes shut
+        o.gaze = { REST_GAZE.yaw * 0.3f, 18.f, 0.f };
+        break;
+    }
+
+    case BotState::Sleepy: {
+        // Sag down, eyes shut, Zzz bubbles float off the upper right
+        // (positions animated by the renderer from localT)
+        o.eyeClose = 1.f;
+        o.bodyCy = 0.06f;
+        o.bodyR = 0.97f;
+        o.gaze = { 0.f, -22.f, -6.f };
+        o.zzzA = clampf((t - 0.3f) / 0.5f);
+        break;
+    }
+
+    case BotState::Dizzy: {
+        // Shake reaction (not part of the carousel): X eyes, spiralling gaze,
+        // wobbling body. Driven directly by main.cpp while the dizzy timer runs.
+        o.gaze = { sinf(t * 9.f) * 55.f, cosf(t * 7.f) * 30.f - 10.f, sinf(t * 11.f) * 15.f };
+        o.eyeX = 1.f;
+        o.bodyCx = sinf(t * 6.3f) * 0.05f;
+        o.bodyCy = cosf(t * 5.1f) * 0.04f;
+        break;
+    }
     default: break;
     }
 }
@@ -134,6 +174,9 @@ void blendPose(BotPose &o, const BotPose &a, const BotPose &b, float k)
     o.eyeW  = lr(a.eyeW, b.eyeW, k);
     o.eyeH  = lr(a.eyeH, b.eyeH, k);
     o.eyeAlpha = lr(a.eyeAlpha, b.eyeAlpha, k);
+    o.eyeClose = lr(a.eyeClose, b.eyeClose, k);
+    o.eyeX = lr(a.eyeX, b.eyeX, k);
+    o.squashAdd = lr(a.squashAdd, b.squashAdd, k);
     for (int i = 0; i < 2; i++) {
         o.dotX[i] = lr(a.dotX[i], b.dotX[i], k);
         o.dotR[i] = lr(a.dotR[i], b.dotR[i], k);
@@ -144,4 +187,5 @@ void blendPose(BotPose &o, const BotPose &a, const BotPose &b, float k)
     o.notifR = lr(a.notifR, b.notifR, k);
     o.notifA = lr(a.notifA, b.notifA, k);
     o.ringA  = lr(a.ringA, b.ringA, k);
+    o.zzzA   = lr(a.zzzA, b.zzzA, k);
 }

@@ -31,6 +31,7 @@ struct Scene {
     const char *name;
     int skin;        // CHARACTERS[] index
     BotState state;  // carousel pose
+    float poseT;     // local time inside the pose
     HeadGaze gaze;   // resolved gaze (gravity mode values)
     float ux, uy;    // world-up in screen coords
     float squash, squashDir;
@@ -45,31 +46,35 @@ int main()
 
     const Scene scenes[] = {
         // device flat: resting gaze, upright frame
-        { "pika_flat",    1, BotState::Idle,     REST_GAZE,                0.f, -1.f,    0.f,   0.f },
+        { "pika_flat",    1, BotState::Idle,     1.0f, REST_GAZE,                0.f, -1.f,    0.f,   0.f },
         // tilted 90° right: downhill = +x, gaze looks right, world-up = -x
-        { "pika_right",   1, BotState::Idle,     { 38.f, 0.f, -18.f },    -1.f, 0.f,     0.15f, 0.f },
-        // tilted 45° down-right
-        { "pika_down45",  1, BotState::Idle,     { 26.9f, -26.9f, -12.7f }, -0.7071f, -0.7071f, 0.1f, 0.7854f },
+        { "pika_right",   1, BotState::Idle,     1.0f, { 38.f, 0.f, -18.f },    -1.f, 0.f,     0.15f, 0.f },
         // upside down: downhill = -y
-        { "pika_upsided", 1, BotState::Idle,     { 0.f, 38.f, 0.f },       0.f, 1.f,     0.f,   0.f },
-        // thinking state (carousel)
-        { "pika_think",   1, BotState::Thinking, REST_GAZE,                0.f, -1.f,    0.f,   0.f },
+        { "pika_upsided", 1, BotState::Idle,     1.0f, { 0.f, 38.f, 0.f },       0.f, 1.f,     0.f,   0.f },
+        { "pika_happy",   1, BotState::Happy,    0.45f, REST_GAZE,               0.f, -1.f,    0.f,   0.f },
+        { "pika_sleepy",  1, BotState::Sleepy,   2.5f, REST_GAZE,                0.f, -1.f,    0.f,   0.f },
+        { "pika_dizzy",   1, BotState::Dizzy,    0.8f, REST_GAZE,                0.f, -1.f,    0.f,   0.f },
         // grokbot references
-        { "grok_flat",    0, BotState::Idle,     REST_GAZE,                0.f, -1.f,    0.f,   0.f },
-        { "grok_right",   0, BotState::Idle,     { 38.f, 0.f, -18.f },    -1.f, 0.f,     0.15f, 0.f },
+        { "grok_flat",    0, BotState::Idle,     1.0f, REST_GAZE,                0.f, -1.f,    0.f,   0.f },
+        { "grok_happy",   0, BotState::Happy,    0.45f, REST_GAZE,               0.f, -1.f,    0.f,   0.f },
+        { "grok_sleepy",  0, BotState::Sleepy,   2.5f, REST_GAZE,                0.f, -1.f,    0.f,   0.f },
+        { "grok_dizzy",   0, BotState::Dizzy,    0.8f, REST_GAZE,                0.f, -1.f,    0.f,   0.f },
     };
 
     for (const Scene &sc : scenes) {
         character_select(sc.skin);
         BotPose pose;
-        poseFor(sc.state, 1.0f, pose);
+        poseFor(sc.state, sc.poseT, pose);
 
-        // frame_cb's squash ellipse + matrix
-        float sq = 1.f - 0.22f * sc.squash, st = 1.f + 0.16f * sc.squash;
-        float rcx = CANVAS / 2.f, rcy = CANVAS / 2.f;
+        // frame_cb's squash ellipse + matrix (impact squash + pose squash)
+        float squashAll = sc.squash + pose.squashAdd;
+        float squashDir = sc.squash > 0.03f ? sc.squashDir : 1.5707963f;
+        float sq = 1.f - 0.22f * squashAll, st = 1.f + 0.16f * squashAll;
+        float rcx = CANVAS / 2.f + pose.bodyCx * SCALE;
+        float rcy = CANVAS / 2.f + pose.bodyCy * SCALE;
         float erx = st * SCALE * pose.bodyR, ery = sq * SCALE * pose.bodyR;
-        float erot = sc.squashDir + 3.14159265f / 2.f;
-        float cr = cosf(sc.squashDir), sr = sinf(sc.squashDir);
+        float erot = squashDir + 3.14159265f / 2.f;
+        float cr = cosf(squashDir), sr = sinf(squashDir);
         float m11 = st * cr * cr + sq * sr * sr;
         float m12 = cr * sr * (st - sq);
         float m22 = st * sr * sr + sq * cr * cr;
@@ -77,9 +82,12 @@ int main()
         float um = hypotf(sc.ux, sc.uy);
         float upSin = sc.ux / um, upCos = -sc.uy / um;
 
+        float lid = 1.f - pose.eyeClose;  // blink system not simulated
+        // main.cpp: gravity gaze only in Idle; other states carry their own gaze
+        HeadGaze gz = sc.state == BotState::Idle ? sc.gaze : pose.gaze;
         CharacterDrawParams cp = {
             fb, rcx, rcy, erot, erx, ery, m11, m12, m22,
-            sc.gaze, &pose, 1.f /* lid open */, SCALE, 1.0f /* localT */,
+            gz, &pose, lid, SCALE, sc.poseT,
             INK, PAPER, upCos, upSin,
         };
         fb_clear(fb, PAPER);

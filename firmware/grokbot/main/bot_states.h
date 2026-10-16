@@ -6,7 +6,7 @@
 #include "bot_face.h"
 #include "bot_render.h"
 
-enum class BotState : int { Idle = 0, Thinking, Notify, Orbit, COUNT };
+enum class BotState : int { Idle = 0, Thinking, Notify, Orbit, Sleepy, Happy, Dizzy, COUNT };
 
 /* Pose: parameters of every drawable element at a given instant.
  * Poses are interpolated with blendPose for morphs (bloub's morph durations). */
@@ -18,12 +18,17 @@ struct BotPose {
     float split;      // half eye separation on the sphere (degrees)
     float eyeW, eyeH; // eye size (ball-radius units)
     float eyeAlpha;   // 0 = faceless state (thinking)
+    float eyeClose;   // 1 = eyes held shut (happy/sleepy); combined with the blink lid
+    float eyeX;       // 1 = eyes drawn as X crosses (dizzy), crossfades with normal eyes
+    float squashAdd;  // pose-driven extra jelly squash (happy landings), vertical
     // thinking's two side dots: x position / radius / opacity (dotA=0 = no dot)
     float dotX[2], dotR[2], dotA[2];
     // notify badge: center (ball-radius units) / radius / opacity (notifA=0 = none)
     float notifX, notifY, notifR, notifA;
     // orbit rings overall opacity (0 = no rings)
     float ringA;
+    // sleepy: Zzz bubbles overall opacity (0 = none; positions animated by localT)
+    float zzzA;
 };
 
 struct StateDefC {
