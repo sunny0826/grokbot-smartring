@@ -17,29 +17,39 @@ static void spin(Vec3 &u, Vec3 &v, float angle)
     v = nv;
 }
 
-void eyePoses(const HeadGaze &gaze, float scale, float split, EyePose out[2])
+void sphereFrame(const HeadGaze &gaze, float azDeg, float elDeg, float scale,
+                 float &x, float &y, float m[4], float &depth)
 {
     Vec3 f = { 0, 0, 1 }, right = { 1, 0, 0 }, down = { 0, 1, 0 };
 
-    spin(f, right, deg(gaze.yaw));     // yaw: forward tips toward right
-    spin(down, f, deg(gaze.pitch));    // pitch: forward tips up (against down)
-    spin(right, down, deg(gaze.roll)); // roll: head tilts in its own plane
+    spin(f, right, deg(gaze.yaw));
+    spin(down, f, deg(gaze.pitch));
+    spin(right, down, deg(gaze.roll));
 
+    spin(f, right, deg(azDeg));  // toward the right vector
+    spin(f, down, deg(elDeg));   // toward the down vector
+
+    x = f.x * scale;
+    y = f.y * scale;
+    m[0] = right.x; m[1] = right.y;
+    m[2] = down.x;  m[3] = down.y;
+    depth = f.z;
+}
+
+void eyePoses(const HeadGaze &gaze, float scale, float split, EyePose out[2])
+{
     for (int i = 0; i < 2; i++) {
-        Vec3 ef = f, er = right;
-        spin(ef, er, deg(split * (i == 0 ? -1 : 1)));
-        out[i].x = ef.x * scale;
-        out[i].y = ef.y * scale;
-        out[i].a = er.x;
-        out[i].b = er.y;
-        out[i].c = down.x;
-        out[i].d = down.y;
-        out[i].depth = ef.z;
+        float m[4];
+        sphereFrame(gaze, split * (i == 0 ? -1.f : 1.f), 0.f, scale,
+                    out[i].x, out[i].y, m, out[i].depth);
+        out[i].a = m[0];
+        out[i].b = m[1];
+        out[i].c = m[2];
+        out[i].d = m[3];
     }
 }
 
 /* -------------------------------------------------- idle liveliness */
-
 // Pre-generated blink schedule: deterministic and stateless (same seed as bloub)
 static float BLINKS[512];
 static int BLINK_COUNT = 0;

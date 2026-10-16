@@ -15,6 +15,7 @@
 #include "bot_face.h"
 #include "bot_render.h"
 #include "bot_states.h"
+#include "bot_character.h"
 
 static const char *TAG = "grokbot";
 
@@ -43,6 +44,14 @@ static float s_yaw = 0, s_pitch = 0, s_roll = 0;  // smoothed gaze
 static float s_mix = 0;              // how much gravity controls the gaze
 static float s_poke_at = -10.f;      // time of last poke
 static bool s_imu_ok = false;
+static bool s_force_clear = false;   // full clear on next gravity frame (set on skin switch)
+static float s_ux = 0.f, s_uy = -1.f;  // smoothed world-up direction (screen coords)
+
+/* ---- Touch: tap/hold = poke, horizontal swipe = switch character skin ---- */
+static lv_point_t s_tp0;             // press start (screen coords)
+static bool s_tactive = false;
+static bool s_tswiped = false;
+static float s_tpress_at = 0.f;
 
 /* ---- Idle carousel driver (cycles thinking/notify/orbit when lying flat) ---- */
 static bool s_carousel = false;    // carousel active
@@ -147,6 +156,23 @@ static void frame_cb(lv_timer_t *)
         lerpf(REST_GAZE.roll + lv.dRoll, s_roll, s_mix),
     };
 
+    /* ---- Upright rotation: world-up direction in screen coords, smoothed as a vector
+     * (angle smoothing would snap across ±180°). Skins that keep their head upright
+     * (pika's ears) rotate their local frame by (upCos, upSin); grokbot ignores it.
+     * Near flat the target eases back to screen-up, so the carousel stays upright. */
+    float tux = 0.f, tuy = -1.f;
+    if (gm > 0.8f) { tux = -gx / gm; tuy = -gy / gm; }
+    float uk = 1.f - expf(-dt / 0.2f);
+    s_ux += (tux - s_ux) * uk;
+    s_uy += (tuy - s_uy) * uk;
+    float um = hypotf(s_ux, s_uy);
+    float upCos = 1.f, upSin = 0.f;
+    if (um > 1e-3f) {
+        // R(up) maps local up (0,-1) to (upSin, -upCos) = normalized world-up
+        upSin = s_ux / um;
+        upCos = -s_uy / um;
+    }
+
     /* ---- Idle carousel: enter after lying near-flat (gm<1.1) for 1.5s, exit immediately on a
      * clear tilt (gm>2.0). The desk-flat baseline measures gm~=0.9, so thresholds need margin.
      * On switching, snapshot the old pose and blend linearly over the new state's morph time;
@@ -205,7 +231,7 @@ static void frame_cb(lv_timer_t *)
     int64_t r0 = esp_timer_get_time();
 
     bool decor = s_carousel || s_pose.ringA > 0.001f || s_pose.dotA[0] > 0.001f ||
-                 s_pose.dotA[1] > 0.001f || s_pose.notifA > 0.001f;
+                 s_pose.dotA[1] > 0.001f || s_pose.notifA > 0.001f || character_full_clear();
 
     float cx0 = CANVAS / 2.f, cy0 = CANVAS / 2.f;
     float ox = s_px + lv.driftX, oy = s_py + lv.driftY;
@@ -245,8 +271,9 @@ static void frame_cb(lv_timer_t *)
     } else {
         bool sameBox = !s_first && s_prev.x1 == cur.x1 && s_prev.y1 == cur.y1 &&
                        s_prev.x2 == cur.x2 && s_prev.y2 == cur.y2;
-        if (s_first) {
+        if (s_first || s_force_clear) {
             s_first = false;
+            s_force_clear = false;
             fb_clear_rect(s_fb, 0, 0, CANVAS - 1, CANVAS - 1, PAPER);
         } else if (!sameBox) {
             // Position changed: clear the old spot (the new box is fully written by the draw pass,
@@ -259,66 +286,23 @@ static void frame_cb(lv_timer_t *)
 
     int64_t tClear = esp_timer_get_time();
 
-    // Back half of the orbit ring (z<0): drawn first, occluded by the body — real depth ordering
-    // makes the ring read as an orbit
-    if (s_pose.ringA > 0.001f) {
-        for (int i = 0; i < 6; i++) {
-            float a = s_pose.ringA * clampf((s_localT - i * 0.13f) / 0.3f);
-            if (a > 0.01f) fb_arc(s_fb, RING_SEEDS[i], s_localT, rcx, rcy, SCALE, a, false);
-        }
-    }
-
-    fb_draw_ellipse_over(s_fb, rcx, rcy, erot, erx, ery, INK, PAPER);
+    // The character itself lives in bot_character.cpp (the "skin"); everything it
+    // needs is resolved here into plain numbers.
+    CharacterDrawParams cp = {
+        s_fb,
+        rcx, rcy,
+        erot, erx, ery,
+        m11, m12, m22,
+        gaze,
+        &s_pose,
+        lid,
+        SCALE,
+        s_localT,
+        INK, PAPER,
+        upCos, upSin,
+    };
+    character_draw(cp);
     int64_t tPoly = esp_timer_get_time();
-
-    // The two thinking side dots (same ink as the body, "growing" out of the ball wall)
-    for (int j = 0; j < 2; j++) {
-        if (s_pose.dotA[j] > 0.01f && s_pose.dotR[j] > 0.01f) {
-            float dr = s_pose.dotR[j] * SCALE;
-            fb_fill_ellipse(s_fb, rcx + s_pose.dotX[j] * SCALE, rcy, 0.f, dr, dr, INK,
-                            s_pose.dotA[j]);
-        }
-    }
-
-    // Notify badge: a paper-colored notch "bites" the badge out of the body, then it is filled
-    // blue (NOTIF_MARGIN follows the body scale)
-    if (s_pose.notifA > 0.001f && s_pose.notifR > 0.005f) {
-        float bx = rcx + s_pose.notifX * SCALE;
-        float by = rcy + s_pose.notifY * SCALE;
-        float br = s_pose.notifR * SCALE;
-        float notch = br + 0.054f * SCALE * s_pose.bodyR;
-        fb_fill_ellipse(s_fb, bx, by, 0.f, notch, notch, PAPER, s_pose.notifA);
-        fb_fill_ellipse(s_fb, bx, by, 0.f, br, br, NOTIF_BLUE565, s_pose.notifA);
-    }
-
-    // Eyes: spherical projection -> capsule. Eye positions and matrices follow the body squash.
-    if (s_pose.eyeAlpha > 0.01f) {
-        EyePose ep[2];
-        eyePoses(gaze, SCALE, s_pose.split, ep);
-        float lidK = blinkScale(lid);
-        for (int i = 0; i < 2; i++) {
-            if (ep[i].depth < 0.05f) continue;  // rotated to the back
-            float alpha = clampf((ep[i].depth - 0.05f) / 0.25f) * s_pose.eyeAlpha;
-            float lx = ep[i].x, ly = ep[i].y;
-            float ex = rcx + m11 * lx + m12 * ly;
-            float ey = rcy + m12 * lx + m22 * ly;
-            // Matrix follows the squash, then flattens vertically in screen space (blink)
-            float a = m11 * ep[i].a + m12 * ep[i].c;
-            float b = m11 * ep[i].b + m12 * ep[i].d;
-            float c = (m12 * ep[i].a + m22 * ep[i].c) * lidK;
-            float d = (m12 * ep[i].b + m22 * ep[i].d) * lidK;
-            fb_fill_capsule(s_fb, ex, ey, a, b, c, d,
-                            s_pose.eyeW * SCALE / 2, s_pose.eyeH * SCALE / 2, PAPER, alpha);
-        }
-    }
-
-    // Front half of the orbit ring (z>=0): drawn over the body and eyes
-    if (s_pose.ringA > 0.001f) {
-        for (int i = 0; i < 6; i++) {
-            float a = s_pose.ringA * clampf((s_localT - i * 0.13f) / 0.3f);
-            if (a > 0.01f) fb_arc(s_fb, RING_SEEDS[i], s_localT, rcx, rcy, SCALE, a, true);
-        }
-    }
 
     // Invalidate the whole canvas: with double-buffered draw strips, self-maintained dirty rects
     // cannot keep both buffers consistent (root cause of ghosting).
@@ -357,9 +341,8 @@ static void frame_cb(lv_timer_t *)
 }
 
 /* ---- Poke: impulse away from gravity + a blink */
-static void poke_cb(lv_event_t *e)
+static void do_poke()
 {
-    if (lv_event_get_code(e) != LV_EVENT_PRESSING) return;
     if (s_t - s_poke_at < 0.3f) return;  // debounce
     s_poke_at = s_t;
     // Fling away from the current gravity direction
@@ -370,6 +353,43 @@ static void poke_cb(lv_event_t *e)
     float ky = gm > 0.5f ? -gy / gm : -0.8f;
     s_vx += kx * 3.2f;
     s_vy += ky * 3.2f;
+}
+
+/* ---- Touch handler: tap or stationary hold = poke; horizontal swipe = next/prev skin.
+ * A press only pokes once it has stayed within a 40 px radius for 0.12 s (a quick tap
+ * pokes on release), so the start of a swipe never triggers a spurious poke. */
+static void touch_cb(lv_event_t *e)
+{
+    lv_indev_t *indev = lv_indev_active();
+    if (!indev) return;
+    lv_point_t pt;
+    lv_indev_get_point(indev, &pt);
+    lv_event_code_t code = lv_event_get_code(e);
+
+    if (code == LV_EVENT_PRESSED) {
+        s_tp0 = pt;
+        s_tactive = true;
+        s_tswiped = false;
+        s_tpress_at = s_t;
+        return;
+    }
+    if (!s_tactive) return;
+    float dx = (float)(pt.x - s_tp0.x), dy = (float)(pt.y - s_tp0.y);
+
+    if (code == LV_EVENT_PRESSING) {
+        if (fabsf(dx) > 40.f || fabsf(dy) > 40.f) s_tswiped = true;
+        if (!s_tswiped && s_t - s_tpress_at > 0.12f) do_poke();
+    } else if (code == LV_EVENT_RELEASED) {
+        s_tactive = false;
+        if (s_tswiped && fabsf(dx) > 60.f && fabsf(dx) > fabsf(dy) * 1.2f) {
+            character_select(character_index() + (dx > 0 ? 1 : -1));
+            s_force_clear = true;  // the new skin may not fill the old one's pixels
+            ESP_LOGI(TAG, "character -> %s (%d/%d)", character_name(character_index()),
+                     character_index() + 1, character_count());
+        } else if (!s_tswiped) {
+            do_poke();  // quick tap, shorter than the hold threshold
+        }
+    }
 }
 
 /* ------------------------------------------------ Entry point */
@@ -395,10 +415,17 @@ extern "C" void app_main(void)
     s_canvas = lv_canvas_create(scr);
     lv_canvas_set_buffer(s_canvas, buf, CANVAS, CANVAS, LV_COLOR_FORMAT_RGB565);
     lv_obj_center(s_canvas);
-    lv_obj_add_event_cb(s_canvas, poke_cb, LV_EVENT_PRESSING, NULL);
+    lv_obj_add_event_cb(s_canvas, touch_cb, LV_EVENT_PRESSED, NULL);
+    lv_obj_add_event_cb(s_canvas, touch_cb, LV_EVENT_PRESSING, NULL);
+    lv_obj_add_event_cb(s_canvas, touch_cb, LV_EVENT_RELEASED, NULL);
+    // The 20 px ring outside the canvas still belongs to the screen: swipes may start there
+    lv_obj_add_event_cb(scr, touch_cb, LV_EVENT_PRESSED, NULL);
+    lv_obj_add_event_cb(scr, touch_cb, LV_EVENT_PRESSING, NULL);
+    lv_obj_add_event_cb(scr, touch_cb, LV_EVENT_RELEASED, NULL);
 
     lv_timer_create(frame_cb, 16, NULL);  // ~60 fps, matching the TE-gated panel refresh rate
     esp_lv_adapter_unlock();
 
-    ESP_LOGI(TAG, "grokbot started, canvas %dx%d", CANVAS, CANVAS);
+    ESP_LOGI(TAG, "grokbot started, canvas %dx%d, %d characters (swipe to switch)", CANVAS, CANVAS,
+             character_count());
 }

@@ -1,6 +1,7 @@
 #include "bot_render.h"
 #include "bot_math.h"
 #include <cstring>
+#include "esp_heap_caps.h"
 
 /* ------------------------------------------------ basics */
 
@@ -70,10 +71,20 @@ void fb_fill_poly(Fb &fb, const float *xs, const float *ys, int n, uint16_t colo
 {
     if (n < 3 || alpha <= 0.f || fb.h > MAX_DIM || fb.w > MAX_DIM) return;
 
-    static int16_t bucket[MAX_DIM][MAX_ROW_EDGES];
-    static uint8_t bcnt[MAX_DIM];
-    static float cov[MAX_DIM];
-    memset(bcnt, 0, sizeof(bcnt));
+    /* Scratch buffers live in PSRAM, allocated lazily on first use: as static
+     * DRAM they cost ~24 KB, which pushed the display's 253 KB primary buffer
+     * allocation over the internal-RAM limit (boot loop). */
+    static int16_t (*bucket)[MAX_ROW_EDGES] = nullptr;
+    static uint8_t *bcnt = nullptr;
+    static float *cov = nullptr;
+    if (!bucket) {
+        bucket = (int16_t (*)[MAX_ROW_EDGES])heap_caps_malloc(sizeof(int16_t) * MAX_DIM * MAX_ROW_EDGES,
+                                                              MALLOC_CAP_SPIRAM);
+        bcnt = (uint8_t *)heap_caps_malloc(MAX_DIM, MALLOC_CAP_SPIRAM);
+        cov = (float *)heap_caps_malloc(sizeof(float) * MAX_DIM, MALLOC_CAP_SPIRAM);
+        if (!bucket || !bcnt || !cov) return;
+    }
+    memset(bcnt, 0, MAX_DIM);
 
     for (int i = 0; i < n; i++) {
         float y1 = ys[i], y2 = ys[(i + 1) % n];

@@ -23,6 +23,15 @@ constexpr HeadGaze REST_GAZE = { 28.49f, 28.62f, -13.f };  // measured resting g
 
 void eyePoses(const HeadGaze &gaze, float scale, float split, EyePose out[2]);
 
+// Project an arbitrary point on the face sphere together with its tangent basis:
+// az/el are degrees relative to the face forward (az > 0 = to the right,
+// el > 0 = downward), following the same gaze rotation as the eyes.
+// x/y are in units of scale; m[4] is the screen image of the tangent basis
+// rows [right; down] (dimensionless); depth is the normal z (>0 = facing forward).
+// Used to anchor 3D appendages (pika's ears, cheeks) on the sphere.
+void sphereFrame(const HeadGaze &gaze, float azDeg, float elDeg, float scale,
+                 float &x, float &y, float m[4], float &depth);
+
 struct Liveliness {
     float dYaw, dPitch, dRoll;
     float lid;             // 1 = open, 0 = closed

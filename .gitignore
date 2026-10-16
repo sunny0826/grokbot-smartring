@@ -17,3 +17,9 @@ reference/smartring_plus/
 .DS_Store
 *.swp
 .vscode/
+
+# ---- 桌面皮肤预览器产物 ----
+firmware/grokbot/sim/sim
+firmware/grokbot/sim/sim_dbg
+firmware/grokbot/sim/out/
+*.dSYM/
