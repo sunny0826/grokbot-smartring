@@ -1,13 +1,13 @@
-# SmartRing-Plus BSP 要求的最小配置（见 BSP README）
+# Minimal configuration required by the SmartRing-Plus BSP (see BSP README)
 CONFIG_SPIRAM=y
 CONFIG_SPIRAM_MODE_OCT=y
 CONFIG_CODEC_I2C_BACKWARD_COMPATIBLE=n
 CONFIG_LV_USE_CLIB_MALLOC=y
-# 动画渲染吃 CPU，开性能优化
+# Animation rendering is CPU-hungry; enable performance optimization
 CONFIG_COMPILER_OPTIMIZATION_PERF=y
-# BSP 的 IMU 250Hz 采样任务用 pdMS_TO_TICKS(4)，100Hz 节拍下为 0 会触发断言
+# The BSP's 250Hz IMU sampling task uses pdMS_TO_TICKS(4), which would assert to 0 at 100Hz ticks
 CONFIG_FREERTOS_HZ=1000
-# 本机实测 16MB Flash
+# Measured 16MB flash on this unit
 CONFIG_ESPTOOLPY_FLASHSIZE_16MB=y
 CONFIG_ESP_LVGL_ADAPTER_ENABLE_FPS_STATS=y
 CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ_240=y

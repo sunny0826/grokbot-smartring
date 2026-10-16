@@ -1,4 +1,4 @@
-// 从 bloub src/bot/face.ts 逐行移植
+// Ported line-by-line from bloub src/bot/face.ts
 #include "bot_face.h"
 
 struct Vec3 {
@@ -7,7 +7,7 @@ struct Vec3 {
 
 static constexpr float deg(float d) { return d * 3.14159265358979f / 180.f; }
 
-// 在 u/v 张成的平面内把这对正交基旋转 angle
+// Rotate the orthonormal basis pair (u, v) within the plane they span, by `angle`
 static void spin(Vec3 &u, Vec3 &v, float angle)
 {
     float c = cosf(angle), s = sinf(angle);
@@ -21,9 +21,9 @@ void eyePoses(const HeadGaze &gaze, float scale, float split, EyePose out[2])
 {
     Vec3 f = { 0, 0, 1 }, right = { 1, 0, 0 }, down = { 0, 1, 0 };
 
-    spin(f, right, deg(gaze.yaw));    // 偏航：forward 倒向 right
-    spin(down, f, deg(gaze.pitch));   // 俯仰：forward 倒向上（down 的反方向）
-    spin(right, down, deg(gaze.roll)); // 滚转：头部在自身平面内倾斜
+    spin(f, right, deg(gaze.yaw));     // yaw: forward tips toward right
+    spin(down, f, deg(gaze.pitch));    // pitch: forward tips up (against down)
+    spin(right, down, deg(gaze.roll)); // roll: head tilts in its own plane
 
     for (int i = 0; i < 2; i++) {
         Vec3 ef = f, er = right;
@@ -38,9 +38,9 @@ void eyePoses(const HeadGaze &gaze, float scale, float split, EyePose out[2])
     }
 }
 
-/* -------------------------------------------------- 静止时的生命感 */
+/* -------------------------------------------------- idle liveliness */
 
-// 预先生成的眨眼时间表：确定性、无状态（与 bloub 同一种子）
+// Pre-generated blink schedule: deterministic and stateless (same seed as bloub)
 static float BLINKS[512];
 static int BLINK_COUNT = 0;
 
@@ -51,25 +51,25 @@ static void initBlinks()
     while (t < 900.f && BLINK_COUNT < 510) {
         BLINKS[BLINK_COUNT++] = t;
         t += 1.9f + rng.next() * 2.7f;
-        if (rng.next() < 0.18f) {   // 偶尔双眨眼
+        if (rng.next() < 0.18f) {   // occasional double blink
             BLINKS[BLINK_COUNT++] = t;
             t += 0.24f;
         }
     }
 }
 
-constexpr float BLINK_DUR = 0.18f;  // 实测：10fps 下 1~2 帧
+constexpr float BLINK_DUR = 0.18f;  // measured: 1-2 frames at 10 fps in the reference
 
 static float blinkLid(float t)
 {
-    // 时间表循环周期 900 秒
+    // The schedule loops every 900 s
     t = fmodf(t, 900.f);
     for (int i = 0; i < BLINK_COUNT; i++) {
         float start = BLINKS[i];
         if (t < start) break;
         float k = (t - start) / BLINK_DUR;
         if (k >= 0.f && k <= 1.f)
-            return k < 0.45f ? 1.f - k / 0.45f : (k - 0.45f) / 0.55f;  // 快闭慢开
+            return k < 0.45f ? 1.f - k / 0.45f : (k - 0.45f) / 0.55f;  // fast close, slow open
     }
     return 1.f;
 }
@@ -82,7 +82,7 @@ Liveliness liveliness(float t, float wander, bool blink, bool floating)
         inited = true;
     }
     Liveliness l;
-    // 各周期互质：漂移在肉眼看来永不重复
+    // Mutually coprime periods: the drift never visibly repeats
     l.dYaw = (loopNoise(t, 11.3f, 0.4f) * 5.5f + loopNoise(t, 3.7f, 2.1f) * 1.6f) * wander;
     l.dPitch = (loopNoise(t, 9.1f, 1.3f) * 4.2f + loopNoise(t, 4.3f, 0.7f) * 1.3f) * wander;
     l.dRoll = loopNoise(t, 13.7f, 3.2f) * 2.2f * wander;

@@ -2,20 +2,21 @@
 #include "bot_math.h"
 #include <cstring>
 
-/* ------------------------------------------------ 基础 */
+/* ------------------------------------------------ basics */
 
 static inline uint16_t blend565(uint16_t dst, uint16_t src, float a)
 {
     int dr = (dst >> 11) & 31, dg = (dst >> 5) & 63, db = dst & 31;
     int sr = (src >> 11) & 31, sg = (src >> 5) & 63, sb = src & 31;
-    // 四舍五入而非截断：消掉 565 低位的系统性偏暗台阶
+    // Round instead of truncate: removes the systematic dark bias in the 565 low bits
     int r = dr + (int)((sr - dr) * a + (sr >= dr ? 0.5f : -0.5f));
     int g = dg + (int)((sg - dg) * a + (sg >= dg ? 0.5f : -0.5f));
     int b = db + (int)((sb - db) * a + (sb >= db ? 0.5f : -0.5f));
     return (uint16_t)((r << 11) | (g << 5) | b);
 }
 
-/* 覆盖率整形：smoothstep 软化斜坡两端，边缘过渡更"哑光"，运动时边缘不闪 */
+/* Coverage shaping: smoothstep softens both ends of the ramp, so edges look
+ * matte instead of banded and don't shimmer in motion */
 static inline float shapeCov(float c)
 {
     return c * c * (3.f - 2.f * c);
@@ -40,7 +41,7 @@ void fb_clear_rect(Fb &fb, int x0, int y0, int x1, int y1, uint16_t color)
     for (int y = y0; y <= y1; y++) {
         uint16_t *row = fb.px + (size_t)y * fb.w;
         int x = x0;
-        // 对齐到 32 位边界后用 32 位填充（PSRAM 上快近一倍）
+        // Align to 32-bit boundary, then fill in 32-bit pairs (nearly 2x faster on PSRAM)
         if ((x & 1) && x <= x1) { row[x++] = color; }
         uint32_t *p32 = (uint32_t *)(row + x);
         int pairs = (x1 - x + 1) / 2;
@@ -57,9 +58,10 @@ void fb_blend_px(Fb &fb, int x, int y, uint16_t c, float a)
     dst = blend565(dst, c, a > 1.f ? 1.f : a);
 }
 
-/* ------------------------------------------------ 多边形填充
- * 按行建边桶（每条边只跨几行），每行 4 次子行超采样；
- * 交点排序后成对形成覆盖区间，像素覆盖率 = 区间与像素 footprint 的交集长度。
+/* ------------------------------------------------ polygon fill
+ * Per-row edge buckets (each edge spans only a few rows), 4x sub-row
+ * supersampling; sorted intersections pair up into coverage spans, and pixel
+ * coverage = span ∩ pixel footprint length.
  */
 #define MAX_ROW_EDGES 32
 #define MAX_DIM 360
@@ -100,7 +102,7 @@ void fb_fill_poly(Fb &fb, const float *xs, const float *ys, int n, uint16_t colo
                     hits[nh++] = xs[i] + (yy - y1) * (xs[j] - xs[i]) / (y2 - y1);
                 }
             }
-            for (int i = 1; i < nh; i++) {  // 插入排序（hits 数量很小）
+            for (int i = 1; i < nh; i++) {  // insertion sort (hit count is tiny)
                 float v = hits[i];
                 int k = i - 1;
                 while (k >= 0 && hits[k] > v) { hits[k + 1] = hits[k]; k--; }
@@ -126,16 +128,16 @@ void fb_fill_poly(Fb &fb, const float *xs, const float *ys, int n, uint16_t colo
     }
 }
 
-/* ------------------------------------------------ 椭圆填充（SDF + 软边） */
+/* ------------------------------------------------ ellipse fill (SDF + soft edge) */
 
 void fb_fill_ellipse(Fb &fb, float cx, float cy, float rot, float rx, float ry, uint16_t color,
                      float alpha)
 {
     if (rx < 1.f || ry < 1.f || alpha <= 0.f) return;
     float cr = cosf(rot), sr = sinf(rot);
-    // 屏幕 -> 单位圆空间的逆变换：lx = (dx·cr + dy·sr)/rx，ly = (-dx·sr + dy·cr)/ry
+    // Inverse transform screen -> unit-circle space: lx = (dx·cr + dy·sr)/rx, ly = (-dx·sr + dy·cr)/ry
     float invRx = 1.f / rx, invRy = 1.f / ry;
-    // 包围盒（旋转椭圆的外接矩形，含 2px 软边带）
+    // Bounding box (rotated ellipse's AABB, incl. the 2 px soft-edge band)
     float exx = sqrtf(rx * rx * cr * cr + ry * ry * sr * sr) + 2.5f;
     float eyy = sqrtf(rx * rx * sr * sr + ry * ry * cr * cr) + 2.5f;
     int x0 = (int)floorf(cx - exx), x1 = (int)ceilf(cx + exx);
@@ -145,15 +147,15 @@ void fb_fill_ellipse(Fb &fb, float cx, float cy, float rot, float rx, float ry, 
     if (x1 > fb.w - 1) x1 = fb.w - 1;
     if (y1 > fb.h - 1) y1 = fb.h - 1;
 
-    // 用平方距离代替 sqrtf：newlib 的 sqrtf 是软实现（~100 周期/次），热路径禁用
-    // 软边近似：d²-1 ≈ 2(d-1)（d≈1 附近），pxPerUnit 是 归一化距离->像素 的缩放
-    // 2px 过渡带 + smoothstep，与 fb_draw_ellipse_over 一致
+    // Squared distance instead of sqrtf: newlib's sqrtf is soft-float (~100 cycles), banned in hot paths
+    // Soft-edge approximation: d²-1 ≈ 2(d-1) (near d≈1); pxPerUnit scales normalized distance -> pixels
+    // 2 px band + smoothstep, same convention as fb_draw_ellipse_over
     float pxPerUnit = (rx + ry) * 0.5f;
     float k2 = pxPerUnit * 0.25f;
     for (int y = y0; y <= y1; y++) {
         uint16_t *row = fb.px + (size_t)y * fb.w;
         float dy = y + 0.5f - cy;
-        // 行起点处局部坐标，之后按步长递增，避免逐像素乘法
+        // Local coords at row start, then increment per pixel to avoid per-pixel multiplies
         float lx = ((x0 + 0.5f - cx) * cr + dy * sr) * invRx;
         float ly = (-(x0 + 0.5f - cx) * sr + dy * cr) * invRy;
         float stepX = cr * invRx, stepY = -sr * invRy;
@@ -168,7 +170,7 @@ void fb_fill_ellipse(Fb &fb, float cx, float cy, float rot, float rx, float ry, 
     }
 }
 
-/* ------------------------------------------------ 覆盖式椭圆（写满包围盒，零读） */
+/* ------------------------------------------------ overwrite ellipse (writes every bbox pixel, zero reads) */
 
 void fb_draw_ellipse_over(Fb &fb, float cx, float cy, float rot, float rx, float ry,
                           uint16_t color, uint16_t bg)
@@ -185,9 +187,9 @@ void fb_draw_ellipse_over(Fb &fb, float cx, float cy, float rot, float rx, float
     if (x1 > fb.w - 1) x1 = fb.w - 1;
     if (y1 > fb.h - 1) y1 = fb.h - 1;
 
-    // 2px 宽抗锯齿过渡带（原 1px 在运动时会出现爬行锯齿）：
-    // 覆盖率 = clamp(0.5 - 像素距离/2)，再经 smoothstep 软化两端
-    float k2 = (rx + ry) * 0.125f;  // (d²-1)/2 ≈ d-1，乘像素缩放再除 2 加宽过渡带
+    // 2 px anti-alias band (the original 1 px band crawled during motion):
+    // coverage = clamp(0.5 - pixelDist/2), then smoothstep to soften both ends
+    float k2 = (rx + ry) * 0.125f;  // (d²-1)/2 ≈ d-1, times pixel scale, halved to widen the band
     for (int y = y0; y <= y1; y++) {
         uint16_t *row = fb.px + (size_t)y * fb.w;
         float dy = y + 0.5f - cy;
@@ -197,7 +199,7 @@ void fb_draw_ellipse_over(Fb &fb, float cx, float cy, float rot, float rx, float
         for (int x = x0; x <= x1; x++) {
             float d2 = lx * lx + ly * ly;
             float cov = clampf(0.5f - (d2 - 1.f) * k2);
-            // 盒内每个像素都写：内部墨、外部纸、边缘直接由纸插值（不读旧像素）
+            // Every bbox pixel is written: ink inside, paper outside, edge interpolated from paper (no reads)
             row[x] = cov >= 1.f ? color : (cov <= 0.f ? bg : blend565(bg, color, shapeCov(cov)));
             lx += stepX;
             ly += stepY;
@@ -205,8 +207,9 @@ void fb_draw_ellipse_over(Fb &fb, float cx, float cy, float rot, float rx, float
     }
 }
 
-/* ------------------------------------------------ 胶囊（体育场形）填充
- * 局部坐标半宽 hw / 半高 hh，经 [a b; c d] 映射到屏幕，中心 (cx, cy)，1px 软边。
+/* ------------------------------------------------ capsule (stadium) fill
+ * Local half-width hw / half-height hh, mapped to screen by [a b; c d],
+ * centered at (cx, cy), with a soft edge.
  */
 void fb_fill_capsule(Fb &fb, float cx, float cy, float a, float b, float c, float d,
                      float hw, float hh, uint16_t color, float alpha)
@@ -216,7 +219,7 @@ void fb_fill_capsule(Fb &fb, float cx, float cy, float a, float b, float c, floa
     if (fabsf(det) < 1e-6f) return;
     float ia = d / det, ib = -b / det, ic = -c / det, idd = a / det;
 
-    float exx = fabsf(a) * hw + fabsf(b) * hh + 2.5f;  // 保守包围盒（含 2px 软边带）
+    float exx = fabsf(a) * hw + fabsf(b) * hh + 2.5f;  // conservative bbox (incl. 2 px soft band)
     float eyy = fabsf(c) * hw + fabsf(d) * hh + 2.5f;
     int x0 = (int)floorf(cx - exx), x1 = (int)ceilf(cx + exx);
     int y0 = (int)floorf(cy - eyy), y1 = (int)ceilf(cy + eyy);
@@ -229,7 +232,7 @@ void fb_fill_capsule(Fb &fb, float cx, float cy, float a, float b, float c, floa
     float segX = hw > r ? hw - r : 0.f;
     float segY = hh > r ? hh - r : 0.f;
     float r2 = r * r;
-    // (d²-r²)/(2r) ≈ d-r：软边用平方距离，不用 hypotf；再除 2 把过渡带加宽到 2px
+    // (d²-r²)/(2r) ≈ d-r: squared-distance soft edge, no hypotf; halved again for a 2 px band
     float inv2r = 1.f / (4.f * r);
 
     for (int y = y0; y <= y1; y++) {
@@ -249,11 +252,11 @@ void fb_fill_capsule(Fb &fb, float cx, float cy, float a, float b, float c, floa
     }
 }
 
-/* ------------------------------------------------ 色轮 + 轨道弧 */
+/* ------------------------------------------------ color wheel + orbit arcs */
 
 uint16_t wheel565(float hue)
 {
-    // bloub decor.ts wheel()：S=0.55, L=0.62 的 HSL 色轮
+    // bloub decor.ts wheel(): HSL wheel with S=0.55, L=0.62
     float h = fmodf(fmodf(hue, 360.f) + 360.f, 360.f);
     const float s = 0.55f, l = 0.62f;
     float c = (1.f - fabsf(2.f * l - 1.f)) * s;
@@ -278,9 +281,9 @@ void fb_arc(Fb &fb, const ArcSeed &seed, float t, float cx, float cy, float scal
     float cu = cosf(seed.tilt), su = sinf(seed.tilt);
     float kz = sqrtf(fmaxf(0.f, 1.f - seed.k * seed.k));
     float span = seed.sweep * TAU_;
-    float r = seed.width * scale * 0.5f;      // 描边半径（像素）
-    float dotStep = r * 0.9f;                 // 圆点间距 < 直径，保证连续
-    float arcLen = seed.a * scale * span;     // 近似弧长（椭圆取长轴估算）
+    float r = seed.width * scale * 0.5f;      // stroke radius (pixels)
+    float dotStep = r * 0.9f;                 // dot spacing < diameter keeps the stroke continuous
+    float arcLen = seed.a * scale * span;     // approximate arc length (major-axis estimate)
     int n = (int)(arcLen / dotStep) + 1;
     if (n < 8) n = 8;
     if (n > 96) n = 96;
@@ -289,13 +292,13 @@ void fb_arc(Fb &fb, const ArcSeed &seed, float t, float cx, float cy, float scal
         float p = (float)i / n;
         float th = spin + p * span;
         float ct = cosf(th), st = sinf(th);
-        // u = (cos tilt, sin tilt, 0)；v = (-sin tilt*k, cos tilt*k, kz)
+        // u = (cos tilt, sin tilt, 0); v = (-sin tilt*k, cos tilt*k, kz)
         float x = seed.a * (ct * cu - st * su * seed.k) * scale + cx;
         float y = seed.a * (ct * su + st * cu * seed.k) * scale + cy;
         float z = seed.a * st * kz;
         if (front != (z >= 0.f)) continue;
-        // 色相沿弧渐变（3 站：hue / hue+span/2 / hue+span）
+        // Hue gradient along the arc (3 stops: hue / hue+span/2 / hue+span)
         uint16_t color = wheel565(seed.hue + seed.hueSpan * p);
-        fb_fill_ellipse(fb, x, y, 0.f, r, r, color, alpha);  // 圆点即 rx=ry 的椭圆
+        fb_fill_ellipse(fb, x, y, 0.f, r, r, color, alpha);  // a dot is an ellipse with rx=ry
     }
 }

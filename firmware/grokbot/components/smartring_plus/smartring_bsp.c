@@ -163,20 +163,23 @@ esp_err_t bsp_display_init(void)
     /* QSPI + PSRAM：适配器 OTHER 接口在 RGB565 flush 时自动字节交换，匹配本屏 */
     esp_lv_adapter_display_config_t disp_cfg = ESP_LV_ADAPTER_DISPLAY_SPI_WITH_PSRAM_DEFAULT_CONFIG(
         panel, io, BOARD_LCD_H_RES, BOARD_LCD_V_RES, ESP_LV_ADAPTER_ROTATE_0);
-    /* 条带缓冲放内部 RAM 而非 PSRAM：画布在 PSRAM，flush 每块只需
-     * PSRAM读->内部写一次拷贝 + 内部 RAM 内字节交换，且 TX 缓冲 DMA 直通
-     * 免掉 SPI 反弹拷贝。每块 ~6ms -> ~2ms，整帧管线 ~58ms -> ~26ms。 */
+    /* [local patch] Strip buffers in internal RAM instead of PSRAM: the canvas lives in PSRAM,
+     * so each flush block needs only one PSRAM-read -> internal-write copy plus an in-place
+     * byte swap in internal RAM, and the TX buffer is DMA-direct without an SPI bounce copy.
+     * ~6ms -> ~2ms per block, ~58ms -> ~26ms for the whole frame pipeline. */
     disp_cfg.profile.use_psram = false;
     disp_cfg.profile.buffer_height = 40;
-    /* TE 硬件同步防撕裂：TE 脚接 GPIO38（板级已布线），初始化表末尾已发 TEON(0x35)。
-     * flush 在 TE 上升沿后开始，写入始终跑在扫描束前面，消除运动边缘的撕裂台阶。 */
+    /* [local patch] TE hardware sync against tearing: the TE pin is wired to GPIO38 on the
+     * board, and TEON(0x35) is issued at the end of the init table. Flush starts after the
+     * TE rising edge so writes always stay ahead of the scan beam, eliminating the tearing
+     * steps on moving edges. */
     disp_cfg.tear_avoid_mode = ESP_LV_ADAPTER_TEAR_AVOID_MODE_TE_SYNC;
     disp_cfg.te_sync = (esp_lv_adapter_te_sync_config_t){
         .gpio_num       = BOARD_LCD_TE_IO,
         .bus_freq_hz    = 40 * 1000 * 1000,
         .data_lines     = 4,   /* QSPI */
         .bits_per_pixel = 16,  /* RGB565 */
-        /* tvdl/tvdh/intr_type/window_percent 置 0：用适配器默认值（60Hz/自动边沿/66%） */
+        /* tvdl/tvdh/intr_type/window_percent left 0: use adapter defaults (60Hz/auto edge/66%) */
     };
     s_disp = esp_lv_adapter_register_display(&disp_cfg);
     ESP_RETURN_ON_FALSE(s_disp != NULL, ESP_FAIL, TAG, "esp_lv_adapter_register_display failed");

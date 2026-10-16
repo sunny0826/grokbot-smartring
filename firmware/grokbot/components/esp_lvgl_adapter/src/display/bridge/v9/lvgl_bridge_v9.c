@@ -2340,10 +2340,13 @@ static void display_bridge_v9_flush_gpio_te(esp_lv_adapter_display_bridge_v9_t *
 
     size_t flush_size = (size_t)lv_area_get_size(area) * bridge_color_bytes(impl);
 
-    /* 补丁：TE_SYNC 单缓冲下 flush 严格串行，一帧会被切成多个 40 行条带。
-     * 原版每个条带都等一次 vsync，N 条带 = N 倍帧周期（8 条带 → ~130ms/帧）。
-     * 改为只在每帧第一个条带等 vsync，后续条带背靠背连续传输：
-     * 写入从 TE 沿开始且快于扫描束，依然无撕裂，帧率恢复面板原生速率。 */
+    /* [local patch] With TE_SYNC single buffering, flushes are strictly serialized and one
+     * frame is split into multiple 40-row strips. The original code waited for vsync on
+     * every strip, so N strips = N frame periods (8 strips -> ~130ms/frame).
+     * Changed to wait for vsync only on the first strip of each frame and transmit the
+     * remaining strips back-to-back: writes start at the TE edge and stay ahead of the
+     * scan beam, so tearing is still avoided while the frame rate returns to the panel's
+     * native rate. */
     static uint32_t s_te_chunk_idx = 0;
     const bool te_first_chunk = (s_te_chunk_idx == 0);
     if (lv_display_flush_is_last(disp)) {

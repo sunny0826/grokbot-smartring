@@ -1,7 +1,8 @@
-// Grok Bot 重力动画 —— SmartRing-Plus (ESP32-S3-N16R8, 360x360 圆屏, QMI8658A)
+// Grok Bot gravity animation — SmartRing-Plus (ESP32-S3-N16R8, 360x360 round panel, QMI8658A)
 //
-// 形象移植自 bloub（jeremy-prt/bloub，MIT）：径向轮廓 + 球面投影眼睛。
-// 重力行为：倾斜时 bot 看向低处、身体滚向低处、撞边压扁回弹；触摸 = 戳一下。
+// Character ported from bloub (jeremy-prt/bloub, MIT): radial outline + spherically projected eyes.
+// Gravity behavior: when tilted, the bot looks downhill, its body rolls downhill, and it squashes
+// and bounces on edge impact; touch = poke.
 #include <cmath>
 #include "esp_log.h"
 #include "esp_heap_caps.h"
@@ -17,49 +18,50 @@
 
 static const char *TAG = "grokbot";
 
-/* ------------------------------------------------ 常量 */
+/* ------------------------------------------------ Constants */
 
-#define CANVAS 320                    // 画布边长（圆屏 360，四周留边）
-static constexpr float SCALE = 100.f; // 球半径（像素）
-static constexpr float PMAX = 0.52f;  // 身体最大偏移（球半径单位）：(160-8-100)/100
-static constexpr float ACC = 2.4f;    // 重力加速度系数：r/s² per (m/s²)
-static constexpr float DAMP = 0.9f;   // 速度阻尼（1/s）
-static constexpr float RESTIT = 0.42f;  // 撞边恢复系数
-static const uint16_t PAPER = rgb565(0xec, 0xe7, 0xdb);  // 奶油纸色
-static const uint16_t INK = rgb565(0x0a, 0x0a, 0x0c);    // bot 墨黑（bloub 实测色）
+#define CANVAS 320                    // canvas side length (360 round panel with margin)
+static constexpr float SCALE = 100.f; // ball radius (pixels)
+static constexpr float PMAX = 0.52f;  // max body offset (in ball radii): (160-8-100)/100
+static constexpr float ACC = 2.4f;    // gravity gain: r/s^2 per (m/s^2)
+static constexpr float DAMP = 0.9f;   // velocity damping (1/s)
+static constexpr float RESTIT = 0.42f;  // edge restitution
+static const uint16_t PAPER = rgb565(0xec, 0xe7, 0xdb);  // cream paper color
+static const uint16_t INK = rgb565(0x0a, 0x0a, 0x0c);    // bot ink black (measured from bloub)
 
-/* ------------------------------------------------ 状态 */
+/* ------------------------------------------------ State */
 
 static Fb s_fb;
 static lv_obj_t *s_canvas;
 
-static float s_t = 0.f;              // 动画时钟（秒）
-static float s_px = 0, s_py = 0;     // 身体偏移（球半径单位）
-static float s_vx = 0, s_vy = 0;     // 速度
-static float s_squash = 0;           // 果冻压扁量 0..1
-static float s_squash_dir = 0;       // 压扁方向（弧度）
-static float s_yaw = 0, s_pitch = 0, s_roll = 0;  // 平滑后的注视
-static float s_mix = 0;              // 重力对注视的控制权
-static float s_poke_at = -10.f;      // 上次被戳时刻
+static float s_t = 0.f;              // animation clock (seconds)
+static float s_px = 0, s_py = 0;     // body offset (in ball radii)
+static float s_vx = 0, s_vy = 0;     // velocity
+static float s_squash = 0;           // jelly squash amount 0..1
+static float s_squash_dir = 0;       // squash direction (radians)
+static float s_yaw = 0, s_pitch = 0, s_roll = 0;  // smoothed gaze
+static float s_mix = 0;              // how much gravity controls the gaze
+static float s_poke_at = -10.f;      // time of last poke
 static bool s_imu_ok = false;
 
-/* ---- 待机轮播驱动（平放静止时 thinking/notify/orbit 轮播） ---- */
-static bool s_carousel = false;    // 轮播是否激活
-static float s_flat = 0;           // 持续平放计时（秒）
-static int s_csIdx = 0;            // CAROUSEL 当前下标
-static float s_localT = 0;         // 当前状态本地时间
-static BotPose s_pose;             // 当前生效姿态（morph 插值结果）
-static BotPose s_prevPose;         // morph 起点快照
+/* ---- Idle carousel driver (cycles thinking/notify/orbit when lying flat) ---- */
+static bool s_carousel = false;    // carousel active
+static float s_flat = 0;           // continuous flat-lying timer (seconds)
+static int s_csIdx = 0;            // current CAROUSEL index
+static float s_localT = 0;         // local time in current state
+static BotPose s_pose;             // active pose (morph interpolation result)
+static BotPose s_prevPose;         // morph start snapshot
 static bool s_prevValid = false;
-static float s_morphT = 0;         // 进入当前状态以来的时间
-static bool s_blinkIn = false;     // 本状态进入时是否用眨眼遮住形变
+static float s_morphT = 0;         // time since entering current state
+static bool s_blinkIn = false;     // mask the transition with a blink on entry
 
-/* ------------------------------------------------ 帧回调 */
+/* ------------------------------------------------ Frame callback */
 
 static void frame_cb(lv_timer_t *)
 {
-    /* 实测 dt：TE 同步把帧率门控到面板速率（可能 40~62fps 浮动），
-     * 固定 dt 会在帧率波动时产生快慢失真；钳制范围防卡顿时物理跨大步 */
+    /* Measured dt: TE sync gates the frame rate to the panel rate (may drift 40~62fps);
+     * a fixed dt would distort speed when the rate fluctuates; the clamp prevents huge
+     * physics steps after a stall. */
     static int64_t s_last_us = 0;
     int64_t nowUs = esp_timer_get_time();
     float dt = s_last_us ? (float)(nowUs - s_last_us) * 1e-6f : 1.f / 60.f;
@@ -68,14 +70,15 @@ static void frame_cb(lv_timer_t *)
     if (dt < 0.004f) dt = 0.004f;
     s_t += dt;
 
-    /* ---- 读 IMU：gx 向右、gy 向下的"下滑力"（m/s²），BSP 已做 EMA 滤波 */
+    /* ---- Read IMU: "downhill force" with gx right, gy down (m/s^2); the BSP applies EMA filtering */
     float gx = 0, gy = 0;
     if (s_imu_ok) bsp_imu_get_tilt(&gx, &gy);
     float gm = hypotf(gx, gy);
 
-    /* ---- 物理：弹簧-阻尼滚动 + 圆形边界反弹；轮播时改为回中吸附 ---- */
+    /* ---- Physics: spring-damped rolling + circular boundary bounce; carousel pulls back to center ---- */
     if (s_carousel) {
-        // 轮播时身体居中：否则平放前球停在边缘，姿态会在偏心位置播放
+        // Center the body during carousel: otherwise the ball rests at the edge when laid flat
+        // and poses would play off-center.
         float ck = 1.f - expf(-dt / 0.3f);
         s_px -= s_px * ck;
         s_py -= s_py * ck;
@@ -106,7 +109,7 @@ static void frame_cb(lv_timer_t *)
             }
         }
     }
-    // 运动中的连续果冻：沿速度方向轻微拉伸
+    // Continuous jelly while moving: slight stretch along the velocity direction
     float speed = hypotf(s_vx, s_vy);
     if (speed > 0.8f) {
         float motion = clampf((speed - 0.8f) * 0.08f, 0.f, 0.5f);
@@ -117,18 +120,18 @@ static void frame_cb(lv_timer_t *)
     }
     s_squash *= expf(-5.f * dt);
 
-    /* ---- 注视：重力方向 = 绝对注视目标（对应 bloub 的 setLook 语义） */
-    float mixTarget = clampf((gm - 0.8f) / 2.2f);  // 近平放时让眼睛自由漂移
+    /* ---- Gaze: gravity direction = absolute gaze target (bloub setLook semantics) */
+    float mixTarget = clampf((gm - 0.8f) / 2.2f);  // let the eyes wander freely near flat
     s_mix += (mixTarget - s_mix) * (1.f - expf(-dt / 0.25f));
     float yawT = 38.f * clampf(gx / 9.81f, -1.f, 1.f);
     float pitchT = -38.f * clampf(gy / 9.81f, -1.f, 1.f);
     float rollT = -18.f * clampf(gx / 9.81f, -1.f, 1.f);
-    float k = 1.f - expf(-dt / 0.24f);  // LOOK_MORPH = 0.24s 的追赶惯性
+    float k = 1.f - expf(-dt / 0.24f);  // LOOK_MORPH = 0.24s chase inertia
     s_yaw += (yawT - s_yaw) * k;
     s_pitch += (pitchT - s_pitch) * k;
     s_roll += (rollT - s_roll) * k;
 
-    /* ---- 生命感：漂移 + 眨眼（含被戳后的人工眨眼） */
+    /* ---- Liveliness: wander + blink (including the artificial blink after a poke) */
     float wander = 1.f - 0.7f * s_mix;
     Liveliness lv = liveliness(s_t, wander, true, true);
     float lid = lv.lid;
@@ -144,10 +147,10 @@ static void frame_cb(lv_timer_t *)
         lerpf(REST_GAZE.roll + lv.dRoll, s_roll, s_mix),
     };
 
-    /* ---- 待机轮播：近平放（gm<1.1）持续 1.5s 进入，明确倾斜（gm>2.0）立即退出。
-     * 实测桌面平放基线 gm≈0.9，阈值要留裕量。
-     * 切换时快照旧姿态，在新状态的 morph 时长内线性过渡；
-     * blinkIn 状态用一次快速眨眼遮住形变（bloub 视频同款手法）。 */
+    /* ---- Idle carousel: enter after lying near-flat (gm<1.1) for 1.5s, exit immediately on a
+     * clear tilt (gm>2.0). The desk-flat baseline measures gm~=0.9, so thresholds need margin.
+     * On switching, snapshot the old pose and blend linearly over the new state's morph time;
+     * blinkIn states hide the deformation with a quick blink (same trick as the bloub video). */
     if (gm > 2.0f) s_flat = 0;
     else if (gm < 1.1f) s_flat += dt;
     bool wantCarousel = s_flat > 1.5f;
@@ -158,7 +161,7 @@ static void frame_cb(lv_timer_t *)
         s_carousel = wantCarousel;
         s_csIdx = 0;
         s_localT = 0;
-        s_blinkIn = false;  // 进出轮播本身不眨眼
+        s_blinkIn = false;  // entering/leaving the carousel itself does not blink
     }
     BotPose live;
     if (s_carousel) {
@@ -173,13 +176,13 @@ static void frame_cb(lv_timer_t *)
             s_blinkIn = CAROUSEL[s_csIdx].blinkIn;
         }
         poseFor(CAROUSEL[s_csIdx].id, s_localT, live);
-        // 轮播里没有重力注视，叠加完整漂移保持生命感
+        // No gravity gaze in the carousel; add the full wander to keep it alive
         live.gaze.yaw += lv.dYaw;
         live.gaze.pitch += lv.dPitch;
         live.gaze.roll += lv.dRoll;
     } else {
         poseFor(BotState::Idle, 0.f, live);
-        live.gaze = gaze;  // 重力注视（含漂移）
+        live.gaze = gaze;  // gravity gaze (including wander)
     }
     s_morphT += dt;
     float morphK = s_prevValid ? clampf(s_morphT / CAROUSEL[s_csIdx].morph) : 1.f;
@@ -190,14 +193,15 @@ static void frame_cb(lv_timer_t *)
         s_prevValid = false;
     }
     if (s_blinkIn && morphK < 1.f) {
-        // 眨眼遮罩：morph 中点闭合最深
+        // Blink mask: deepest closure at the morph midpoint
         float blinkLid = fabsf(2.f * morphK - 1.f);
         if (blinkLid < lid) lid = blinkLid;
     }
     gaze = { s_pose.gaze.yaw, s_pose.gaze.pitch, s_pose.gaze.roll };
 
-    /* ---- 渲染。重力模式走脏矩形快路径；轮播有稀疏装饰物（圆环/点/徽标），
-     * 它们不填满包围盒，"绘制 pass 写满盒内像素"的快路径假设不成立，整帧清屏重绘。 */
+    /* ---- Render. Gravity mode takes the dirty-rect fast path; the carousel has sparse
+     * decorations (ring/dots/badge) that do not fill the bounding box, so the fast-path
+     * assumption "the draw pass fills every pixel in the box" breaks — clear and redraw fully. */
     int64_t r0 = esp_timer_get_time();
 
     bool decor = s_carousel || s_pose.ringA > 0.001f || s_pose.dotA[0] > 0.001f ||
@@ -205,22 +209,22 @@ static void frame_cb(lv_timer_t *)
 
     float cx0 = CANVAS / 2.f, cy0 = CANVAS / 2.f;
     float ox = s_px + lv.driftX, oy = s_py + lv.driftY;
-    // squash 沿撞击/速度方向：短轴沿撞击方向，长轴垂直于它
+    // Squash along the impact/velocity direction: short axis along impact, long axis perpendicular
     float sq = 1.f - 0.22f * s_squash, st = (1.f + 0.16f * s_squash) * lv.breath;
-    // 姿态的身体偏移/半径叠加在重力偏移之上（轮播时重力偏移≈0）
+    // Pose body offset/radius stack on top of the gravity offset (~0 during carousel)
     float rcx = cx0 + (ox + s_pose.bodyCx) * SCALE;
     float rcy = cy0 + (oy + s_pose.bodyCy) * SCALE;
-    float erx = st * SCALE * s_pose.bodyR;               // 长半轴（垂直撞击方向）
-    float ery = sq * SCALE * s_pose.bodyR;               // 短半轴（沿撞击方向）
-    float erot = s_squash_dir + 3.14159265f / 2.f;       // 椭圆 rot 对齐长轴
+    float erx = st * SCALE * s_pose.bodyR;               // long semi-axis (perpendicular to impact)
+    float ery = sq * SCALE * s_pose.bodyR;               // short semi-axis (along impact)
+    float erot = s_squash_dir + 3.14159265f / 2.f;       // ellipse rot aligns with the long axis
 
-    // squash 的屏幕系 2x2 变换 M = R(θ)·S(st,sq)·R(-θ)，θ = s_squash_dir
+    // Squash as a screen-space 2x2 transform M = R(theta)·S(st,sq)·R(-theta), theta = s_squash_dir
     float cr = cosf(s_squash_dir), sr = sinf(s_squash_dir);
     float m11 = st * cr * cr + sq * sr * sr;
     float m12 = cr * sr * (st - sq);
     float m22 = st * sr * sr + sq * cr * cr;
 
-    // 包围盒（旋转椭圆外接矩形 + 3px 边距，大于绘制函数内部的 2.5px 软边垫）
+    // Bounding box (rotated-ellipse AABB + 3px margin, larger than the 2.5px soft-edge pad inside the draw calls)
     float bc = cosf(erot), bs = sinf(erot);
     float bex = sqrtf(erx * erx * bc * bc + ery * ery * bs * bs);
     float bey = sqrtf(erx * erx * bs * bs + ery * ery * bc * bc);
@@ -236,8 +240,8 @@ static void frame_cb(lv_timer_t *)
     static lv_area_t s_prev = { 0, 0, 0, 0 };
     static bool s_first = true;
     if (decor) {
-        fb_clear(s_fb, PAPER);   // 轮播：整帧重绘
-        s_first = true;          // 退回重力模式时强制全清一次
+        fb_clear(s_fb, PAPER);   // carousel: full redraw
+        s_first = true;          // force one full clear when returning to gravity mode
     } else {
         bool sameBox = !s_first && s_prev.x1 == cur.x1 && s_prev.y1 == cur.y1 &&
                        s_prev.x2 == cur.x2 && s_prev.y2 == cur.y2;
@@ -245,16 +249,18 @@ static void frame_cb(lv_timer_t *)
             s_first = false;
             fb_clear_rect(s_fb, 0, 0, CANVAS - 1, CANVAS - 1, PAPER);
         } else if (!sameBox) {
-            // 位置变了：清掉旧位置（新包围盒由绘制 pass 写满，无需清并集）
+            // Position changed: clear the old spot (the new box is fully written by the draw pass,
+            // no need to clear the union)
             fb_clear_rect(s_fb, s_prev.x1, s_prev.y1, s_prev.x2, s_prev.y2, PAPER);
         }
-        // sameBox：包围盒没变，绘制 pass 会写满盒内每个像素，无需清屏
+        // sameBox: box unchanged and the draw pass writes every pixel in it — no clear needed
         s_prev = cur;
     }
 
     int64_t tClear = esp_timer_get_time();
 
-    // orbit 圆环后半（z<0）：先画，被身体遮挡 —— 真深度排序让圆环读起来像轨道
+    // Back half of the orbit ring (z<0): drawn first, occluded by the body — real depth ordering
+    // makes the ring read as an orbit
     if (s_pose.ringA > 0.001f) {
         for (int i = 0; i < 6; i++) {
             float a = s_pose.ringA * clampf((s_localT - i * 0.13f) / 0.3f);
@@ -265,7 +271,7 @@ static void frame_cb(lv_timer_t *)
     fb_draw_ellipse_over(s_fb, rcx, rcy, erot, erx, ery, INK, PAPER);
     int64_t tPoly = esp_timer_get_time();
 
-    // thinking 的两个侧点（与身体同为墨色，从球壁"长出来"）
+    // The two thinking side dots (same ink as the body, "growing" out of the ball wall)
     for (int j = 0; j < 2; j++) {
         if (s_pose.dotA[j] > 0.01f && s_pose.dotR[j] > 0.01f) {
             float dr = s_pose.dotR[j] * SCALE;
@@ -274,7 +280,8 @@ static void frame_cb(lv_timer_t *)
         }
     }
 
-    // notify 徽标：纸色缺口把徽标从身体上"咬"出来，再填蓝色（NOTIF_MARGIN 跟随身体尺度）
+    // Notify badge: a paper-colored notch "bites" the badge out of the body, then it is filled
+    // blue (NOTIF_MARGIN follows the body scale)
     if (s_pose.notifA > 0.001f && s_pose.notifR > 0.005f) {
         float bx = rcx + s_pose.notifX * SCALE;
         float by = rcy + s_pose.notifY * SCALE;
@@ -284,18 +291,18 @@ static void frame_cb(lv_timer_t *)
         fb_fill_ellipse(s_fb, bx, by, 0.f, br, br, NOTIF_BLUE565, s_pose.notifA);
     }
 
-    // 眼睛：球面投影 -> 胶囊。眼睛位置与矩阵都跟随身体的 squash 变换。
+    // Eyes: spherical projection -> capsule. Eye positions and matrices follow the body squash.
     if (s_pose.eyeAlpha > 0.01f) {
         EyePose ep[2];
         eyePoses(gaze, SCALE, s_pose.split, ep);
         float lidK = blinkScale(lid);
         for (int i = 0; i < 2; i++) {
-            if (ep[i].depth < 0.05f) continue;  // 转到背面去了
+            if (ep[i].depth < 0.05f) continue;  // rotated to the back
             float alpha = clampf((ep[i].depth - 0.05f) / 0.25f) * s_pose.eyeAlpha;
             float lx = ep[i].x, ly = ep[i].y;
             float ex = rcx + m11 * lx + m12 * ly;
             float ey = rcy + m12 * lx + m22 * ly;
-            // 矩阵跟随 squash，再在屏幕系垂直压扁（眨眼）
+            // Matrix follows the squash, then flattens vertically in screen space (blink)
             float a = m11 * ep[i].a + m12 * ep[i].c;
             float b = m11 * ep[i].b + m12 * ep[i].d;
             float c = (m12 * ep[i].a + m22 * ep[i].c) * lidK;
@@ -305,7 +312,7 @@ static void frame_cb(lv_timer_t *)
         }
     }
 
-    // orbit 圆环前半（z>=0）：盖在身体和眼睛之上
+    // Front half of the orbit ring (z>=0): drawn over the body and eyes
     if (s_pose.ringA > 0.001f) {
         for (int i = 0; i < 6; i++) {
             float a = s_pose.ringA * clampf((s_localT - i * 0.13f) / 0.3f);
@@ -313,12 +320,13 @@ static void frame_cb(lv_timer_t *)
         }
     }
 
-    // 整幅画布失效：双缓冲条带下自维护脏矩形无法保证两份缓冲一致（拖影根因）。
-    // 光栅化已优化到 ~10ms，全幅刷新在帧预算内。
+    // Invalidate the whole canvas: with double-buffered draw strips, self-maintained dirty rects
+    // cannot keep both buffers consistent (root cause of ghosting).
+    // Rasterization is optimized to ~10ms, so a full-area flush fits the frame budget.
     lv_obj_invalidate(s_canvas);
     s_prev = cur;
 
-    // 渲染耗时统计：每 5 秒报一次平均/峰值
+    // Render timing stats: report average/peak every 5 seconds
     int64_t rUs = esp_timer_get_time() - r0;
     static int64_t acc = 0, peak = 0, accPoly = 0, accClear = 0, lastTick = 0, gapPeak = 0;
     static int cnt = 0;
@@ -329,7 +337,7 @@ static void frame_cb(lv_timer_t *)
     lastTick = r0;
     if (rUs > peak) peak = rUs;
     cnt++;
-    if (cnt >= 300) {  // 60fps × 5s
+    if (cnt >= 300) {  // 60fps x 5s
         ESP_LOGI(TAG, "raster avg=%lldus(clear %lld + poly %lld + rest) peak=%lldus | frame gap peak=%lldus | box=%dx%d",
                  acc / cnt, accClear / cnt, accPoly / cnt, peak, gapPeak,
                  cur.x2 - cur.x1 + 1, cur.y2 - cur.y1 + 1);
@@ -348,13 +356,13 @@ static void frame_cb(lv_timer_t *)
     }
 }
 
-/* ---- 戳一下：给反向冲量 + 眨眼 */
+/* ---- Poke: impulse away from gravity + a blink */
 static void poke_cb(lv_event_t *e)
 {
     if (lv_event_get_code(e) != LV_EVENT_PRESSING) return;
-    if (s_t - s_poke_at < 0.3f) return;  // 防抖
+    if (s_t - s_poke_at < 0.3f) return;  // debounce
     s_poke_at = s_t;
-    // 逆着当前重力方向弹出去
+    // Fling away from the current gravity direction
     float gx = 0, gy = 0;
     if (s_imu_ok) bsp_imu_get_tilt(&gx, &gy);
     float gm = hypotf(gx, gy);
@@ -364,17 +372,17 @@ static void poke_cb(lv_event_t *e)
     s_vy += ky * 3.2f;
 }
 
-/* ------------------------------------------------ 入口 */
+/* ------------------------------------------------ Entry point */
 
 extern "C" void app_main(void)
 {
-    ESP_ERROR_CHECK(bsp_display_init());  // I2C + 触摸 + LCD + LVGL + 背光
+    ESP_ERROR_CHECK(bsp_display_init());  // I2C + touch + LCD + LVGL + backlight
     s_imu_ok = (bsp_imu_init() == ESP_OK);
-    if (!s_imu_ok) ESP_LOGW(TAG, "IMU 初始化失败，重力动画降级为静止模式");
+    if (!s_imu_ok) ESP_LOGW(TAG, "IMU init failed, gravity animation degraded to static mode");
 
     uint16_t *buf = (uint16_t *)heap_caps_malloc(CANVAS * CANVAS * 2, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
     if (!buf) {
-        ESP_LOGE(TAG, "画布缓冲分配失败");
+        ESP_LOGE(TAG, "canvas buffer alloc failed");
         return;
     }
     s_fb = { buf, CANVAS, CANVAS };
@@ -389,8 +397,8 @@ extern "C" void app_main(void)
     lv_obj_center(s_canvas);
     lv_obj_add_event_cb(s_canvas, poke_cb, LV_EVENT_PRESSING, NULL);
 
-    lv_timer_create(frame_cb, 16, NULL);  // ~60 fps，匹配 TE 门控后的面板刷新率
+    lv_timer_create(frame_cb, 16, NULL);  // ~60 fps, matching the TE-gated panel refresh rate
     esp_lv_adapter_unlock();
 
-    ESP_LOGI(TAG, "grokbot 启动完成，画布 %dx%d", CANVAS, CANVAS);
+    ESP_LOGI(TAG, "grokbot started, canvas %dx%d", CANVAS, CANVAS);
 }

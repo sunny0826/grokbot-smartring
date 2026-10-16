@@ -1,18 +1,19 @@
 /*
- * ST77916 初始化命令表（A/B 两版屏幕）
+ * ST77916 init command table (two panel revisions, A and B)
  *
- * 原样摘自官方 gitee lvgl_port 示例 smartring_plus.c（本地 sample 已删除，此文件即存档）：
- *   A = 老屏幕（UE018HV-RB39-A002A），B = 新屏幕（UE018HV-RB39-A004A，官方默认）
+ * Copied verbatim from the official gitee lvgl_port sample smartring_plus.c (the local
+ * sample has been deleted; this file is the archive):
+ *   A = old panel (UE018HV-RB39-A002A), B = new panel (UE018HV-RB39-A004A, official default)
  *
- * 本板已确认为 B 版（2026-07-25 验证，见根目录 排障记录-显示屏点亮.md）。
- * 版本选择：编译期宏 BOARD_LCD_VERSION_A（0=B 默认，1=A）。
+ * This board is confirmed to be revision B (verified 2026-07-25).
+ * Revision selection: build-time macro BOARD_LCD_VERSION_A (0 = B, default; 1 = A).
  */
 #pragma once
 
 #include "esp_lcd_st77916.h"
 
 #ifndef BOARD_LCD_VERSION_A
-#define BOARD_LCD_VERSION_A   0   /* 0 = B 版新屏幕（本板已确认 B 版）；1 = A 版老屏幕 */
+#define BOARD_LCD_VERSION_A   0   /* 0 = revision B new panel (this board confirmed B); 1 = revision A old panel */
 #endif
 
 #if BOARD_LCD_VERSION_A
@@ -396,7 +397,7 @@ static const st77916_lcd_init_cmd_t lcd_init_seq[] = {
     {0x36, (uint8_t []){0x00}, 1, 0},
     {0x3A, (uint8_t []){0x05}, 1, 120},
     {0x29, (uint8_t []){}, 0, 0},
-    {0x35, (uint8_t []){0x00}, 1, 0},  /* TEON：开启 TE 信号输出（VSYNC 模式），供适配器 TE_SYNC 防撕裂 */
+    {0x35, (uint8_t []){0x00}, 1, 0},  /* TEON: enable TE signal output (VSYNC mode) for the adapter's TE_SYNC anti-tearing */
 };
 #endif
 

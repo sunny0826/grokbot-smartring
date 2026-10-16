@@ -1,12 +1,12 @@
-// 姿态函数逐值移植自 bloub src/bot/states.ts；常数来自 decor.ts。
+// Pose functions ported value-by-value from bloub src/bot/states.ts; constants from decor.ts.
 #include "bot_states.h"
 #include "bot_math.h"
 #include <cmath>
 
 static constexpr float TAU_ = 6.2831853f;
 
-/* ---- decor.ts 常量 ---- */
-static constexpr float DOT_X[3] = { -0.557f, -0.013f, 0.532f };  // 三个点的 x（实测）
+/* ---- decor.ts constants ---- */
+static constexpr float DOT_X[3] = { -0.557f, -0.013f, 0.532f };  // the three dots' x (measured)
 static constexpr float DOT_R = 0.165f;
 static constexpr float DOT_PEAK = 1.25f;
 
@@ -17,7 +17,7 @@ static constexpr float NOTIF_POP = 1.14f;
 
 const uint16_t NOTIF_BLUE565 = rgb565(0x24, 0x96, 0xe8);
 
-/* mulberry32(0xa11ce) 离线预计算的 6 条轨道（与 bloub 运行值一致） */
+/* The 6 orbit rings, mulberry32(0xa11ce) precomputed offline (identical to bloub at runtime) */
 const ArcSeed RING_SEEDS[6] = {
     { 1.374316f, 0.274937f, 0.111637f, 3.531251f, 3.521581f, 0.745288f, 4.54f, 63.33f, 0.052606f },
     { 1.347803f, 0.316944f, 1.009311f, 3.411252f, 6.146908f, 0.646808f, 81.65f, 66.52f, 0.060184f },
@@ -37,9 +37,9 @@ const StateDefC CAROUSEL[] = {
 };
 const int CAROUSEL_LEN = sizeof(CAROUSEL) / sizeof(CAROUSEL[0]);
 
-/* ---- math.ts（clampf/easeOutCubic/easeInOutCubic 已在 bot_math.h） ---- */
+/* ---- math.ts (clampf/easeOutCubic/easeInOutCubic live in bot_math.h) ---- */
 
-/* 三个点的脉动波：左->中->右依次起伏，周期 1.5s */
+/* The three-dot pulse wave: left -> middle -> right, 1.5 s period */
 static float dotPulse(float t, int i)
 {
     float p = fmodf(fmodf((t - i * 0.5f) / 1.5f, 1.f) + 1.f, 1.f);
@@ -67,7 +67,8 @@ void poseFor(BotState s, float t, BotPose &o)
         break;
 
     case BotState::Thinking: {
-        // 球本身缩成中间的点；两侧点从球的侧壁"长出来"后分离
+        // The ball itself shrinks into the middle dot; the side dots "grow out"
+        // of the ball's flanks before detaching
         float mid = dotPulse(t, 1);
         float emerge = 0.3f + 0.7f * easeOutCubic(clampf(t / 0.3f));
         o.bodyR = DOT_R * (1.f + (DOT_PEAK - 1.f) * mid);
@@ -84,7 +85,8 @@ void poseFor(BotState s, float t, BotPose &o)
     }
 
     case BotState::Notify: {
-        // 蓝色徽标 pop：0.45s 内冲到 +14% 再回落；目光看向徽标另一侧
+        // Blue badge pop: overshoots to +14% within 0.45 s, then settles;
+        // the gaze points away from the badge
         float p = clampf(t / 0.45f);
         float pop = 1.f + (NOTIF_POP - 1.f) * sinf(p * 3.14159265f) * (1.f - p * 0.35f);
         float r = NOTIF_R * (p < 1.f ? pop : 1.f);
@@ -99,8 +101,9 @@ void poseFor(BotState s, float t, BotPose &o)
     }
 
     case BotState::Orbit: {
-        // 简化：身体始终是球（bloub 前 1.6s 有三角->球的 morph，省略），
-        // 运动感由圆环和绕球飞转的目光承担。
+        // Simplification: the body stays a ball (bloub morphs triangle->ball over
+        // the first 1.6 s; omitted). The motion is carried by the rings and the
+        // gaze flying around the sphere.
         float back = easeInOutCubic(clampf((t - 1.6f) / 0.9f));
         o.gaze = {
             REST_GAZE.yaw + sinf(t * 6.5f) * 65.f * (1.f - back),
@@ -108,7 +111,8 @@ void poseFor(BotState s, float t, BotPose &o)
             -13.f
         };
         o.eyeW = 0.18f; o.eyeH = 0.34f + back * 0.07f;
-        // 圆环 0.8s 淡入、结尾 0.9s 淡出（单环错峰由调用方按序号加 0.13s 延迟）
+        // Rings fade in over 0.8 s and out over the last 0.9 s
+        // (per-ring stagger of 0.13 s is applied by the caller via ring index)
         o.ringA = clampf(t / 0.8f) * clampf((3.6f - t) / 0.9f);
         break;
     }
