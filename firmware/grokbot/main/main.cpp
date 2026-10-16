@@ -4,6 +4,7 @@
 // Gravity behavior: when tilted, the bot looks downhill, its body rolls downhill, and it squashes
 // and bounces on edge impact; touch = poke.
 #include <cmath>
+#include <cstring>
 #include "esp_log.h"
 #include "esp_heap_caps.h"
 #include "esp_timer.h"
@@ -16,6 +17,7 @@
 #include "bot_render.h"
 #include "bot_states.h"
 #include "bot_character.h"
+#include "gadget.h"
 
 static const char *TAG = "grokbot";
 
@@ -29,6 +31,11 @@ static constexpr float DAMP = 0.9f;   // velocity damping (1/s)
 static constexpr float RESTIT = 0.42f;  // edge restitution
 static const uint16_t PAPER = rgb565(0xec, 0xe7, 0xdb);  // cream paper color
 static const uint16_t INK = rgb565(0x0a, 0x0a, 0x0c);    // bot ink black (measured from bloub)
+
+// Carousel state names, indexed by BotState
+static const char *const ANIM_NAMES[] = {
+    "idle", "thinking", "notify", "orbit", "sleepy", "happy", "dizzy",
+};
 
 /* ------------------------------------------------ State */
 
@@ -71,7 +78,28 @@ static float s_dizzy = 0;            // remaining dizzy time (seconds)
 static float s_dizzyT = 0;           // local time inside dizzy
 static float s_lastDizzy = -10.f;    // last dizzy trigger (cooldown)
 
+/* ---- Gadget (Grok Bot link) state ---- */
+static int s_backlight = 100;        // BSP powers up at 100%
+static bool s_bat_ok = false;
+
+/* ---- Dizzy: shared by the shake detector and the animation.trigger command ---- */
+static void trigger_dizzy();  // defined after the pose state below
+
+/* ---- Gadget command/state glue: defined below frame_cb, called from it ---- */
+static void gadget_drain();
+static void gadget_publish();
+
 /* ------------------------------------------------ Frame callback */
+
+static void trigger_dizzy()
+{
+    s_dizzy = 1.8f;
+    s_dizzyT = 0.f;
+    s_lastDizzy = s_t;
+    s_prevPose = s_pose;  // morph into the dizzy pose
+    s_prevValid = true;
+    s_morphT = 0;
+}
 
 static void frame_cb(lv_timer_t *)
 {
@@ -86,6 +114,9 @@ static void frame_cb(lv_timer_t *)
     if (dt < 0.004f) dt = 0.004f;
     s_t += dt;
 
+    /* ---- Gadget commands from Grok Bot: executed in LVGL context before physics ---- */
+    gadget_drain();
+
     /* ---- Read IMU: "downhill force" with gx right, gy down (m/s^2); the BSP applies EMA filtering */
     float gx = 0, gy = 0;
     if (s_imu_ok) bsp_imu_get_tilt(&gx, &gy);
@@ -98,12 +129,8 @@ static void frame_cb(lv_timer_t *)
     s_pgy = gy;
     s_jerk += (jerk - s_jerk) * (1.f - expf(-dt / 0.15f));
     if (s_dizzy <= 0.f && s_jerk > 30.f && s_t - s_lastDizzy > 5.f) {
-        s_dizzy = 1.8f;
-        s_dizzyT = 0.f;
-        s_lastDizzy = s_t;
-        s_prevPose = s_pose;  // morph into the dizzy pose
-        s_prevValid = true;
-        s_morphT = 0;
+        trigger_dizzy();
+        gadget_emit_shake(s_jerk);
         ESP_LOGI(TAG, "shake! dizzy (jerk %.1f)", s_jerk);
     }
 
@@ -377,13 +404,17 @@ static void frame_cb(lv_timer_t *)
         ESP_LOGI(TAG, "tilt gx=%.2f gy=%.2f | pos %.2f,%.2f | mix %.2f | jerk %.1f", gx, gy, s_px,
                  s_py, s_mix, s_jerk);
     }
+
+    gadget_publish();
 }
 
-/* ---- Poke: impulse away from gravity + a blink */
-static void do_poke()
+/* ---- Poke: impulse away from gravity + a blink. remote=true when the gadget
+ * command triggered it (reported to the gateway as poke_event). */
+static void do_poke(bool remote = false)
 {
     if (s_t - s_poke_at < 0.3f) return;  // debounce
     s_poke_at = s_t;
+    gadget_emit_poke(remote);
     // Fling away from the current gravity direction
     float gx = 0, gy = 0;
     if (s_imu_ok) bsp_imu_get_tilt(&gx, &gy);
@@ -423,12 +454,103 @@ static void touch_cb(lv_event_t *e)
         if (s_tswiped && fabsf(dx) > 60.f && fabsf(dx) > fabsf(dy) * 1.2f) {
             character_select(character_index() + (dx > 0 ? 1 : -1));
             s_force_clear = true;  // the new skin may not fill the old one's pixels
+            gadget_emit_switched(character_name(character_index()));
             ESP_LOGI(TAG, "character -> %s (%d/%d)", character_name(character_index()),
                      character_index() + 1, character_count());
         } else if (!s_tswiped) {
             do_poke();  // quick tap, shorter than the hold threshold
         }
     }
+}
+
+/* ------------------------------------------------ Gadget link (Grok Bot)
+ * Commands arrive over USB (gadget task), are executed here in LVGL context,
+ * and acked with the post-execution state snapshot. */
+
+static bool set_character(const char *name, const char **err)
+{
+    for (int i = 0; i < character_count(); ++i) {
+        if (!strcmp(name, character_name(i))) {
+            if (i != character_index()) {
+                character_select(i);
+                s_force_clear = true;
+                gadget_emit_switched(name);
+            }
+            return true;
+        }
+    }
+    *err = "unknown character";
+    return false;
+}
+
+// Play a carousel state now (the carousel keeps cycling afterwards), or a dizzy spell.
+static bool trigger_animation(const char *name)
+{
+    if (!strcmp(name, "dizzy")) {
+        trigger_dizzy();
+        return true;
+    }
+    for (int i = 0; i < (int)BotState::COUNT; ++i) {
+        if (!strcmp(name, ANIM_NAMES[i])) {
+            for (int j = 0; j < CAROUSEL_LEN; ++j) {
+                if (CAROUSEL[j].id == (BotState)i) {
+                    s_prevPose = s_pose;
+                    s_prevValid = true;
+                    s_morphT = 0;
+                    s_carousel = true;   // a clear tilt still exits instantly
+                    s_flat = 2.f;
+                    s_csIdx = j;
+                    s_localT = 0;
+                    s_blinkIn = CAROUSEL[j].blinkIn;
+                    return true;
+                }
+            }
+            break;
+        }
+    }
+    return false;
+}
+
+static void gadget_drain()
+{
+    GadgetCommand c;
+    while (gadget_command_take(c)) {
+        bool ok = true;
+        const char *err = nullptr;
+        switch (c.type) {
+        case GadgetCmdType::SetCharacter:
+            ok = set_character(c.name, &err);
+            break;
+        case GadgetCmdType::SetBacklight:
+            bsp_display_backlight_set((uint8_t)c.percent);
+            s_backlight = c.percent;
+            break;
+        case GadgetCmdType::TriggerAnimation:
+            ok = trigger_animation(c.name);
+            if (!ok) err = "unknown animation";
+            break;
+        case GadgetCmdType::Poke:
+            do_poke(true);
+            break;
+        }
+        gadget_command_done(c, ok, err);
+    }
+}
+
+static void gadget_publish()
+{
+    GadgetState gs = {};
+    strlcpy(gs.character, character_name(character_index()), sizeof(gs.character));
+    const char *anim = "gravity";
+    if (s_dizzy > 0.f) anim = "dizzy";
+    else if (s_carousel) anim = ANIM_NAMES[(int)CAROUSEL[s_csIdx].id];
+    strlcpy(gs.anim, anim, sizeof(gs.anim));
+    if (s_imu_ok) bsp_imu_get_tilt(&gs.gx, &gs.gy);
+    gs.backlight = s_backlight;
+    gs.battery_pct = s_bat_ok ? bsp_battery_get_percent() : -1;
+    gs.battery_charging = s_bat_ok && bsp_battery_is_charging();
+    gs.uptime_s = (uint32_t)(esp_timer_get_time() / 1000000);
+    gadget_publish_state(gs);
 }
 
 /* ------------------------------------------------ Entry point */
@@ -438,6 +560,7 @@ extern "C" void app_main(void)
     ESP_ERROR_CHECK(bsp_display_init());  // I2C + touch + LCD + LVGL + backlight
     s_imu_ok = (bsp_imu_init() == ESP_OK);
     if (!s_imu_ok) ESP_LOGW(TAG, "IMU init failed, gravity animation degraded to static mode");
+    s_bat_ok = (bsp_battery_init() == ESP_OK);  // after display init (shares the I2C bus)
 
     uint16_t *buf = (uint16_t *)heap_caps_malloc(CANVAS * CANVAS * 2, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
     if (!buf) {
@@ -464,6 +587,8 @@ extern "C" void app_main(void)
 
     lv_timer_create(frame_cb, 16, NULL);  // ~60 fps, matching the TE-gated panel refresh rate
     esp_lv_adapter_unlock();
+
+    gadget_start();  // USB protocol task; console is disabled, the port is JSON only
 
     ESP_LOGI(TAG, "grokbot started, canvas %dx%d, %d characters (swipe to switch)", CANVAS, CANVAS,
              character_count());

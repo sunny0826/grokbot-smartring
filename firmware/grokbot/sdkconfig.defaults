@@ -9,5 +9,8 @@ CONFIG_COMPILER_OPTIMIZATION_PERF=y
 CONFIG_FREERTOS_HZ=1000
 # Measured 16MB flash on this unit
 CONFIG_ESPTOOLPY_FLASHSIZE_16MB=y
+# The gadget protocol owns the USB Serial/JTAG port (LF-delimited JSON); the
+# secondary console would corrupt the frame stream. Logs stay on UART0 (primary).
+CONFIG_ESP_CONSOLE_SECONDARY_NONE=y
 CONFIG_ESP_LVGL_ADAPTER_ENABLE_FPS_STATS=y
 CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ_240=y

@@ -12,6 +12,14 @@ firmware/grokbot/managed_components/
 reference/bloub/
 reference/smartring-plus-full/
 reference/smartring_plus/
+reference/grok-gadgets-esp32-sdk/
+
+# ---- Python 虚拟环境（网关/PlatformIO 工具链）----
+.venv-grok/
+.venv-pio/
+
+# ---- PlatformIO 产物（smartring-gadget 参考草图）----
+firmware/smartring-gadget/.pio/
 
 # ---- 系统/编辑器 ----
 .DS_Store
