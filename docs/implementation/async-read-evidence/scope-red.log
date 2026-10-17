@@ -1,0 +1,22 @@
+Build and evidence: /private/tmp/my-bot-async-read-probe/permanent
+-- Configuring done (0.1s)
+-- Generating done (0.0s)
+-- Build files have been written to: /private/tmp/my-bot-async-read-probe/permanent/build
+[ 98%] Built target lvgl
+[ 98%] Building CXX object CMakeFiles/actor.dir/scenarios.cpp.o
+[ 98%] Building CXX object CMakeFiles/actor.dir/host.cpp.o
+[ 98%] Linking CXX executable actor
+[100%] Built target actor
+FAIL: phase deadline: expected=4 actual=5
+all_host_tasks_joined=true
+Traceback (most recent call last):
+  File "/Users/guoxudong/codes/my-bot/firmware/grokbot/tools/check_voice_actor.py", line 48, in <module>
+    main()
+    ~~~~^^
+  File "/Users/guoxudong/codes/my-bot/firmware/grokbot/tools/check_voice_actor.py", line 41, in main
+    subprocess.run(command, cwd=work, check=True, timeout=15)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/guoxudong/.local/share/mise/installs/python/3.14.2/lib/python3.14/subprocess.py", line 577, in run
+    raise CalledProcessError(retcode, process.args,
+                             output=stdout, stderr=stderr)
+subprocess.CalledProcessError: Command '['/private/tmp/my-bot-async-read-probe/permanent/build/actor', 'scope-ready']' returned non-zero exit status 1.

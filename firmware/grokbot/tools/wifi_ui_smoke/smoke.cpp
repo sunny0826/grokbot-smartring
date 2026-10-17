@@ -5,6 +5,7 @@
 #include "home_controls.h"
 #include "voice_ui.h"
 #include "voice.h"
+#include "character_fixture.h"
 #include "lvgl.h"
 #include <cassert>
 #include <cstdio>
@@ -123,14 +124,20 @@ int main() {
     static unsigned char buffer[360*40*3];
     lv_display_set_buffers(display,buffer,nullptr,sizeof(buffer),LV_DISPLAY_RENDER_MODE_PARTIAL);
     lv_display_set_flush_cb(display,flush);
+    CharacterFixture character;
+    character.create(lv_screen_active());
     auto *input=lv_indev_create(); lv_indev_set_type(input,LV_INDEV_TYPE_POINTER); lv_indev_set_display(input,display);
     lv_indev_set_read_cb(input,[](lv_indev_t *,lv_indev_data_t *data){data->point=pointer;data->state=pressed;});
     unsigned underlying=0;
     auto *voice=lv_button_create(lv_screen_active()); lv_obj_set_size(voice,360,360);
+    lv_obj_set_style_bg_opa(voice, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(voice, 0, 0);
+    lv_obj_set_style_shadow_width(voice, 0, 0);
     lv_obj_add_event_cb(voice,[](lv_event_t *e){++*static_cast<unsigned *>(lv_event_get_user_data(e));},LV_EVENT_CLICKED,&underlying);
     home_controls_attach(voice);
     voice_state.phase=VoicePhase::Idle; voice_state.generation=1;
-    status_bar_create(lv_screen_active(),true); voice_ui_create(lv_screen_active()); wifi_setup_ui_create(); tick();
+    status_bar_create(lv_screen_active(),true); voice_ui_create(lv_screen_active()); wifi_setup_ui_create();
+    character.start(); tick();
     assert(!find(lv_layer_top(),LV_SYMBOL_WIFI) && !find(lv_screen_active(),"按住说话"));
     shot("home-hidden.ppm");
     tap(134,38); tick();
@@ -278,5 +285,25 @@ int main() {
     assert(wifi_setup_ui_active() && find(lv_layer_top(),"1 加入临时 Wi-Fi"));
     click("退出"); phase(WifiSetupPhase::Closed);
     assert(!wifi_setup_ui_active() && !find(lv_screen_active(),"按住说话"));
+    tap(180,180); tick();
+    for(bool operation:{false,true}) {
+        voice_state.phase=VoicePhase::Claimed; ++voice_state.generation; tick();
+        tap(134,38); tick();
+        if(operation) click("圆屏输入");
+        assert(lv_obj_has_flag(character.canvas,LV_OBJ_FLAG_HIDDEN));
+        const auto covered=character.pixels;
+        const auto actions_before=voice_actions;
+        voice_state.phase=VoicePhase::Replied; ++voice_state.generation;
+        for(int i=0;i<8;++i) tick();
+        assert(character.pixels==covered && voice_actions==actions_before);
+        if(operation) { click("取消"); phase(WifiSetupPhase::Closed); }
+        else click("返回");
+        tick(); lv_refr_now(nullptr);
+        assert(!wifi_setup_ui_active() && !lv_obj_has_flag(character.canvas,LV_OBJ_FLAG_HIDDEN));
+        assert(character.pixels!=covered && voice_actions==actions_before);
+        assert(find(lv_screen_active(),"收到回复"));
+        shot(operation ? "fusion-operation-close.ppm" : "fusion-menu-return.ppm");
+    }
+    puts("Fused Wi-Fi cover PASS: menu return and operation close restore current pose without hidden rendering or delayed auto-open");
     printf("Wi-Fi UI real LVGL PASS: ASCII 32–126, pointer input, 7/8/63/64/65 boundaries, masked input, scan generations, failures/retry/cancel/close, circle target geometry, no event passthrough, method menu, static phone QR pages, countdown, phone failure/reconnect/close/success\n");
 }

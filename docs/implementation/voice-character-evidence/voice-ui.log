@@ -1,0 +1,19 @@
+Build and screenshots: /private/tmp/my-bot-voice-fusion
+-- Configuring done (0.1s)
+-- Generating done (0.1s)
+-- Build files have been written to: /private/tmp/my-bot-voice-fusion/build
+[ 97%] Built target lvgl
+[ 97%] Building CXX object CMakeFiles/smoke.dir/smoke.cpp.o
+[ 98%] Linking CXX executable smoke
+[100%] Built target smoke
+Fused UI PASS: first visible frame clears Home, three skins, covered canvas unchanged, static errors cause zero refreshes, reading/home restoration
+voice UI real LVGL: pointer hold/release, slide cancellation, quick tap, gesture capture, recording, inbox, paging, explicit read, cache ownership, stale clicks PASS
+Preview: /private/tmp/my-bot-voice-fusion/home.png
+Preview: /private/tmp/my-bot-voice-fusion/touch-recording.png
+Preview: /private/tmp/my-bot-voice-fusion/recording.png
+Preview: /private/tmp/my-bot-voice-fusion/failure.png
+Preview: /private/tmp/my-bot-voice-fusion/waiting-first.png
+Preview: /private/tmp/my-bot-voice-fusion/waiting-second.png
+Preview: /private/tmp/my-bot-voice-fusion/review-static.png
+Preview: /private/tmp/my-bot-voice-fusion/reply-first.png
+Preview: /private/tmp/my-bot-voice-fusion/reply-last.png

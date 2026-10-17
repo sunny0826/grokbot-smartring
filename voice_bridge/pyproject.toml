@@ -1,6 +1,6 @@
 [project]
 name = "smartring-voice-bridge"
-version = "0.2.0"
+version = "0.3.2"
 description = "Durable LAN voice receiver and local transcription for Smartring"
 requires-python = ">=3.11,<3.14"
 dependencies = ["Pillow>=11,<13", "fonttools>=4,<5", "websockets>=17,<18"]

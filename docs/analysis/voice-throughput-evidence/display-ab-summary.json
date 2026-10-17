@@ -1,0 +1,74 @@
+{
+  "scope": "Same binary, three skins idle trajectory, 5 interleaved 15-second measurement blocks per rendering mode; not full firmware version A/B or new physics benchmark",
+  "benchmark_binary_sha256": "79594e4d0db95f10d58e9a85927c20a17d4ecb8a403101ce2d8135c66e8a523a",
+  "fps_formula": "(frames - 1) * 1000000 / elapsed_us",
+  "percentile_resolution": "1ms buckets, upper bound; all observed quantiles below overflow bucket 255ms",
+  "modes": {
+    "legacy-full": {
+      "fps": [
+        12.1701,
+        11.812,
+        11.7326,
+        11.7504,
+        12.1384
+      ],
+      "bytes_per_frame": [
+        204800.0,
+        204800.0,
+        204800.0,
+        204800.0,
+        204800.0
+      ],
+      "p50_ms_upper": [
+        83,
+        83,
+        83,
+        83,
+        82
+      ],
+      "p95_ms_upper": [
+        102,
+        111,
+        115,
+        115,
+        103
+      ],
+      "median_fps": 11.812,
+      "median_bytes_per_frame": 204800.0
+    },
+    "tracked-partial": {
+      "fps": [
+        17.6696,
+        17.4684,
+        17.3047,
+        17.6564,
+        17.7961
+      ],
+      "bytes_per_frame": [
+        89993.56,
+        90010.3,
+        89912.29,
+        89967.58,
+        89885.36
+      ],
+      "p50_ms_upper": [
+        51,
+        52,
+        51,
+        51,
+        51
+      ],
+      "p95_ms_upper": [
+        83,
+        82,
+        85,
+        82,
+        83
+      ],
+      "median_fps": 17.6564,
+      "median_bytes_per_frame": 89967.58
+    }
+  },
+  "median_fps_increase_percent": 49.47849644429396,
+  "median_bytes_per_frame_reduction_percent": 56.070517578125
+}

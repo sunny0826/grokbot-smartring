@@ -5,7 +5,9 @@ public HTTPS **443** tunnel, are saved
 in SQLite, and are transcribed locally. The service registers a **real software
 mailbox** with the existing gadget gateway's loopback device listener, normally
 **8764** in this deployment. Grok uses the existing OAuth MCP connector and its
-six tools. There is no webhook, separate model assistant, or gateway fork.
+six tools. An optional Grok Bot routine webhook wakes that same Bot after
+transcription; the existing MCP still handles claims and replies.
+There is no separate model assistant or gateway fork.
 
 ## Start
 
@@ -23,7 +25,9 @@ faster-whisper `base` model. Normal operation only reads cached assets. If a
 SOCKS proxy prevents downloading, prefix the preload command with
 `env -u ALL_PROXY -u all_proxy -u HTTP_PROXY -u http_proxy -u HTTPS_PROXY -u https_proxy`.
 Transcription runs on CPU with int8 inference. `--model` accepts a cached model
-name or directory; `--preload-model` only prepares the speech model.
+name or directory; `--preload-model` only prepares the speech model and exits. Normal service startup
+loads the cached model and font before accepting HTTPS traffic, keeping the same
+instances in the running process.
 
 Enrollment atomically adds `smartring-voice-mailbox` with its own random token to
 `~/.config/grok-gadgets/credentials.json`, preserving existing devices and saving
@@ -84,10 +88,13 @@ The largest allowed reply command, including 128 non-BMP characters, bounded IDs
 and JSON escaping, fits the gateway's 2048-byte response frame. Device-to-gateway
 hello/state/ack frames are independently bounded to 16 KiB.
 
-**Activation is explicit:** say “处理圆屏语音” in the existing Bot. The current
-MCP connection does not wake the Bot when speech arrives. A scheduled routine is
-a separate Bot-side setup, not an installed feature of this service. See
-[the Bot workflow](../docs/boot-voice.md) for a copyable instruction.
+**Automatic activation:** configure a webhook routine on the existing Bot and
+start with `--grok-trigger /private/path/trigger.json`. See
+[automatic setup and recovery](../docs/automatic-voice.md). The sender uses the
+Bot routine Bearer/HTTP 200 contract, not the separate HMAC/202 automation API.
+The notification carries IDs only; a new Bot run must obtain a fresh claim
+before executing. An accepted notification is not a completed reply.
+Without this option, say “处理圆屏语音” in the existing Bot as before.
 
 ## State and recovery
 
@@ -107,7 +114,8 @@ A process lock permits one database owner; all local actors share its locked Sto
 Interrupted transcription resumes. Claims and replies survive restarts.
 Historical unsent `needs_configuration` jobs with transcripts migrate to ready.
 Legacy submitted/dispatching/unconfirmed jobs become `needs_review` and are never
-automatically rerun. The obsolete webhook sender/configuration has been removed.
+automatically rerun. The old HMAC webhook sender/configuration remains removed;
+the optional Bot routine trigger has a separate private configuration.
 
 ## Device endpoints
 
@@ -158,3 +166,18 @@ not stand in for the actual Bot conversation or physical microphone/display.
 
 PyAV remains pinned below 19 for faster-whisper 1.2.1 decoder compatibility
 ([upstream issue](https://github.com/SYSTRAN/faster-whisper/issues/1589)).
+
+## Stage timings
+
+Version 0.3.1 records bounded, content-free events alongside job state in SQLite.
+To inspect recent jobs without sending MCP commands:
+
+```sh
+python3 voice_bridge/tools/voice_timings.py --last 5
+```
+
+The report separates upload-body read, storage, transcription, notification,
+claim and reply rendering. Durations between events use a monotonic clock only
+within the same service process. A restart begins a new clock domain. Historical
+jobs have no reconstructed timing events. Upload-body timing excludes the TLS
+handshake, and fetching a reply page does not establish physical display time.

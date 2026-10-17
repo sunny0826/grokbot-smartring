@@ -1,0 +1,59 @@
+Build and screenshots: /private/tmp/my-bot-wifi-fusion
+-- Configuring done (0.0s)
+-- Generating done (0.0s)
+-- Build files have been written to: /private/tmp/my-bot-wifi-fusion/build
+[ 96%] Built target lvgl
+[ 96%] Building CXX object CMakeFiles/smoke.dir/smoke.cpp.o
+[ 96%] Building CXX object CMakeFiles/smoke.dir/Users/guoxudong/codes/my-bot/firmware/grokbot/main/voice_ui.cpp.o
+[ 97%] Linking CXX executable smoke
+[100%] Built target smoke
+Combined real voice/Wi-Fi UI LVGL live heap: 54216 bytes
+Combined real voice/Wi-Fi UI after QR live heap: 56496 bytes
+Fused Wi-Fi cover PASS: menu return and operation close restore current pose without hidden rendering or delayed auto-open
+Wi-Fi UI real LVGL PASS: ASCII 32–126, pointer input, 7/8/63/64/65 boundaries, masked input, scan generations, failures/retry/cancel/close, circle target geometry, no event passthrough, method menu, static phone QR pages, countdown, phone failure/reconnect/close/success
+Preview: /private/tmp/my-bot-wifi-fusion/busy-operation.png
+Preview: /private/tmp/my-bot-wifi-fusion/busy.png
+Preview: /private/tmp/my-bot-wifi-fusion/cancelled.png
+Preview: /private/tmp/my-bot-wifi-fusion/connected.png
+Preview: /private/tmp/my-bot-wifi-fusion/connecting.png
+Preview: /private/tmp/my-bot-wifi-fusion/empty.png
+Preview: /private/tmp/my-bot-wifi-fusion/entry.png
+Preview: /private/tmp/my-bot-wifi-fusion/failure.png
+Preview: /private/tmp/my-bot-wifi-fusion/fusion-menu-return.png
+Preview: /private/tmp/my-bot-wifi-fusion/fusion-operation-close.png
+Preview: /private/tmp/my-bot-wifi-fusion/home-hidden.png
+Preview: /private/tmp/my-bot-wifi-fusion/home-revealed.png
+Preview: /private/tmp/my-bot-wifi-fusion/home-timeout.png
+Preview: /private/tmp/my-bot-wifi-fusion/keyboard-64.png
+Preview: /private/tmp/my-bot-wifi-fusion/keyboard-lower.png
+Preview: /private/tmp/my-bot-wifi-fusion/keyboard-number.png
+Preview: /private/tmp/my-bot-wifi-fusion/keyboard-symbol-2.png
+Preview: /private/tmp/my-bot-wifi-fusion/keyboard-symbol-3.png
+Preview: /private/tmp/my-bot-wifi-fusion/keyboard-symbol.png
+Preview: /private/tmp/my-bot-wifi-fusion/keyboard-upper.png
+Preview: /private/tmp/my-bot-wifi-fusion/method.png
+Preview: /private/tmp/my-bot-wifi-fusion/networks-last.png
+Preview: /private/tmp/my-bot-wifi-fusion/networks.png
+Preview: /private/tmp/my-bot-wifi-fusion/phone-cleanup.png
+Preview: /private/tmp/my-bot-wifi-fusion/phone-connected.png
+Preview: /private/tmp/my-bot-wifi-fusion/phone-connecting.png
+Preview: /private/tmp/my-bot-wifi-fusion/phone-exit.png
+Preview: /private/tmp/my-bot-wifi-fusion/phone-failed.png
+Preview: /private/tmp/my-bot-wifi-fusion/phone-initial-scan.png
+Preview: /private/tmp/my-bot-wifi-fusion/phone-join.png
+Preview: /private/tmp/my-bot-wifi-fusion/phone-preparing.png
+Preview: /private/tmp/my-bot-wifi-fusion/phone-retry.png
+Preview: /private/tmp/my-bot-wifi-fusion/phone-saved-offline.png
+Preview: /private/tmp/my-bot-wifi-fusion/phone-saving.png
+Preview: /private/tmp/my-bot-wifi-fusion/phone-web.png
+Preview: /private/tmp/my-bot-wifi-fusion/preparing.png
+Preview: /private/tmp/my-bot-wifi-fusion/qr-url.png
+Preview: /private/tmp/my-bot-wifi-fusion/qr-wifi.png
+Preview: /private/tmp/my-bot-wifi-fusion/restoring.png
+Preview: /private/tmp/my-bot-wifi-fusion/saving.png
+Preview: /private/tmp/my-bot-wifi-fusion/scan-failed.png
+Preview: /private/tmp/my-bot-wifi-fusion/scanning.png
+Preview: /private/tmp/my-bot-wifi-fusion/ssid-32.png
+Preview: /private/tmp/my-bot-wifi-fusion/ssid-chinese.png
+Preview: /private/tmp/my-bot-wifi-fusion/ssid-hex-32.png
+Preview: /private/tmp/my-bot-wifi-fusion/ssid-hex.png

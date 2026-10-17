@@ -1,0 +1,17 @@
+cmake_minimum_required(VERSION 3.20)
+project(render_ui_smoke LANGUAGES C CXX)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+get_filename_component(FIRMWARE "${CMAKE_CURRENT_LIST_DIR}/../.." ABSOLUTE)
+set(LVGL "${FIRMWARE}/managed_components/lvgl__lvgl")
+set(MAIN "${FIRMWARE}/main")
+file(GLOB_RECURSE LVGL_SOURCES CONFIGURE_DEPENDS "${LVGL}/src/*.c")
+add_library(lvgl STATIC ${LVGL_SOURCES})
+target_compile_definitions(lvgl PUBLIC LV_CONF_SKIP)
+target_include_directories(lvgl PUBLIC "${LVGL}")
+add_executable(render_ui ui.cpp "${MAIN}/bot_render.cpp" "${MAIN}/bot_face.cpp" "${MAIN}/bot_states.cpp"
+    "${MAIN}/bot_character.cpp" "${MAIN}/bot_character_pika.cpp" "${MAIN}/bot_character_rowlet.cpp")
+target_compile_options(render_ui PRIVATE -UNDEBUG)
+target_include_directories(render_ui PRIVATE "${MAIN}" "${FIRMWARE}/sim/shim"
+    "${FIRMWARE}/components/esp_lvgl_adapter/src/display/bridge/v9")
+target_link_libraries(render_ui PRIVATE lvgl)

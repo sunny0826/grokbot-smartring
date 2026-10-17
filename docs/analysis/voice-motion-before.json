@@ -1,0 +1,547 @@
+[
+  {
+    "elapsed": 5.212,
+    "firmware": "0.9.1-tap-controls",
+    "memory": {
+      "free_internal": 139283,
+      "min_internal": 136755,
+      "largest_internal": 64512
+    },
+    "voice": {
+      "phase": 0,
+      "duration_ms": 0,
+      "error": "",
+      "unread": false,
+      "page_index": 0,
+      "page_count": 0,
+      "boot_pressed": false,
+      "boot_presses": 0,
+      "boot_queued": 0,
+      "boot_handled": 0,
+      "start_stage": 0,
+      "hold_id": 0
+    },
+    "link": "wifi-down",
+    "clock_ready": true
+  },
+  {
+    "elapsed": 10.347,
+    "firmware": "0.9.1-tap-controls",
+    "memory": {
+      "free_internal": 68535,
+      "min_internal": 57799,
+      "largest_internal": 29696
+    },
+    "voice": {
+      "phase": 0,
+      "duration_ms": 0,
+      "error": "",
+      "unread": false,
+      "page_index": 0,
+      "page_count": 0,
+      "boot_pressed": false,
+      "boot_presses": 0,
+      "boot_queued": 0,
+      "boot_handled": 0,
+      "start_stage": 0,
+      "hold_id": 0
+    },
+    "link": "wifi",
+    "clock_ready": true
+  },
+  {
+    "elapsed": 15.531,
+    "firmware": "0.9.1-tap-controls",
+    "memory": {
+      "free_internal": 104559,
+      "min_internal": 57799,
+      "largest_internal": 31744
+    },
+    "voice": {
+      "phase": 0,
+      "duration_ms": 0,
+      "error": "",
+      "unread": false,
+      "page_index": 0,
+      "page_count": 0,
+      "boot_pressed": false,
+      "boot_presses": 0,
+      "boot_queued": 0,
+      "boot_handled": 0,
+      "start_stage": 0,
+      "hold_id": 0
+    },
+    "link": "wifi",
+    "clock_ready": true
+  },
+  {
+    "elapsed": 20.609,
+    "firmware": "0.9.1-tap-controls",
+    "memory": {
+      "free_internal": 106231,
+      "min_internal": 57799,
+      "largest_internal": 31744
+    },
+    "voice": {
+      "phase": 0,
+      "duration_ms": 0,
+      "error": "",
+      "unread": false,
+      "page_index": 0,
+      "page_count": 0,
+      "boot_pressed": false,
+      "boot_presses": 0,
+      "boot_queued": 0,
+      "boot_handled": 0,
+      "start_stage": 0,
+      "hold_id": 0
+    },
+    "link": "wifi",
+    "clock_ready": true
+  },
+  {
+    "elapsed": 22.71,
+    "raster": "raster avg=10745us(clear 1140 + poly 9379 + rest) peak=18960us | frame gap peak=91130us | box=213x202"
+  },
+  {
+    "elapsed": 25.765,
+    "firmware": "0.9.1-tap-controls",
+    "memory": {
+      "free_internal": 97411,
+      "min_internal": 57799,
+      "largest_internal": 31744
+    },
+    "voice": {
+      "phase": 0,
+      "duration_ms": 0,
+      "error": "",
+      "unread": false,
+      "page_index": 0,
+      "page_count": 0,
+      "boot_pressed": false,
+      "boot_presses": 0,
+      "boot_queued": 0,
+      "boot_handled": 0,
+      "start_stage": 0,
+      "hold_id": 0
+    },
+    "link": "wifi",
+    "clock_ready": true
+  },
+  {
+    "elapsed": 30.833,
+    "firmware": "0.9.1-tap-controls",
+    "memory": {
+      "free_internal": 75755,
+      "min_internal": 57799,
+      "largest_internal": 31744
+    },
+    "voice": {
+      "phase": 0,
+      "duration_ms": 0,
+      "error": "",
+      "unread": false,
+      "page_index": 0,
+      "page_count": 0,
+      "boot_pressed": false,
+      "boot_presses": 0,
+      "boot_queued": 0,
+      "boot_handled": 0,
+      "start_stage": 0,
+      "hold_id": 0
+    },
+    "link": "wifi",
+    "clock_ready": true
+  },
+  {
+    "elapsed": 36.061,
+    "firmware": "0.9.1-tap-controls",
+    "memory": {
+      "free_internal": 69611,
+      "min_internal": 57799,
+      "largest_internal": 31744
+    },
+    "voice": {
+      "phase": 0,
+      "duration_ms": 0,
+      "error": "",
+      "unread": false,
+      "page_index": 0,
+      "page_count": 0,
+      "boot_pressed": false,
+      "boot_presses": 0,
+      "boot_queued": 0,
+      "boot_handled": 0,
+      "start_stage": 0,
+      "hold_id": 0
+    },
+    "link": "wifi",
+    "clock_ready": true
+  },
+  {
+    "elapsed": 41.325,
+    "firmware": "0.9.1-tap-controls",
+    "memory": {
+      "free_internal": 103043,
+      "min_internal": 57799,
+      "largest_internal": 31744
+    },
+    "voice": {
+      "phase": 0,
+      "duration_ms": 0,
+      "error": "",
+      "unread": false,
+      "page_index": 0,
+      "page_count": 0,
+      "boot_pressed": false,
+      "boot_presses": 0,
+      "boot_queued": 0,
+      "boot_handled": 0,
+      "start_stage": 0,
+      "hold_id": 0
+    },
+    "link": "wifi",
+    "clock_ready": true
+  },
+  {
+    "elapsed": 42.964,
+    "raster": "raster avg=10123us(clear 639 + poly 9267 + rest) peak=17297us | frame gap peak=87297us | box=211x202"
+  },
+  {
+    "elapsed": 46.498,
+    "firmware": "0.9.1-tap-controls",
+    "memory": {
+      "free_internal": 68643,
+      "min_internal": 57799,
+      "largest_internal": 31744
+    },
+    "voice": {
+      "phase": 0,
+      "duration_ms": 0,
+      "error": "",
+      "unread": false,
+      "page_index": 0,
+      "page_count": 0,
+      "boot_pressed": false,
+      "boot_presses": 0,
+      "boot_queued": 0,
+      "boot_handled": 0,
+      "start_stage": 0,
+      "hold_id": 0
+    },
+    "link": "wifi",
+    "clock_ready": true
+  },
+  {
+    "elapsed": 51.635,
+    "firmware": "0.9.1-tap-controls",
+    "memory": {
+      "free_internal": 102579,
+      "min_internal": 57799,
+      "largest_internal": 31744
+    },
+    "voice": {
+      "phase": 0,
+      "duration_ms": 0,
+      "error": "",
+      "unread": false,
+      "page_index": 0,
+      "page_count": 0,
+      "boot_pressed": false,
+      "boot_presses": 0,
+      "boot_queued": 0,
+      "boot_handled": 0,
+      "start_stage": 0,
+      "hold_id": 0
+    },
+    "link": "wifi",
+    "clock_ready": true
+  },
+  {
+    "elapsed": 56.713,
+    "firmware": "0.9.1-tap-controls",
+    "memory": {
+      "free_internal": 72683,
+      "min_internal": 57799,
+      "largest_internal": 31744
+    },
+    "voice": {
+      "phase": 0,
+      "duration_ms": 0,
+      "error": "",
+      "unread": false,
+      "page_index": 0,
+      "page_count": 0,
+      "boot_pressed": false,
+      "boot_presses": 0,
+      "boot_queued": 0,
+      "boot_handled": 0,
+      "start_stage": 0,
+      "hold_id": 0
+    },
+    "link": "wifi",
+    "clock_ready": true
+  },
+  {
+    "elapsed": 61.819,
+    "firmware": "0.9.1-tap-controls",
+    "memory": {
+      "free_internal": 102479,
+      "min_internal": 56779,
+      "largest_internal": 31744
+    },
+    "voice": {
+      "phase": 0,
+      "duration_ms": 0,
+      "error": "",
+      "unread": false,
+      "page_index": 0,
+      "page_count": 0,
+      "boot_pressed": false,
+      "boot_presses": 0,
+      "boot_queued": 0,
+      "boot_handled": 0,
+      "start_stage": 0,
+      "hold_id": 0
+    },
+    "link": "wifi",
+    "clock_ready": true
+  },
+  {
+    "elapsed": 63.055,
+    "raster": "raster avg=10118us(clear 568 + poly 9326 + rest) peak=18447us | frame gap peak=90181us | box=213x203"
+  },
+  {
+    "elapsed": 66.823,
+    "firmware": "0.9.1-tap-controls",
+    "memory": {
+      "free_internal": 73815,
+      "min_internal": 56779,
+      "largest_internal": 31744
+    },
+    "voice": {
+      "phase": 0,
+      "duration_ms": 0,
+      "error": "",
+      "unread": false,
+      "page_index": 0,
+      "page_count": 0,
+      "boot_pressed": false,
+      "boot_presses": 0,
+      "boot_queued": 0,
+      "boot_handled": 0,
+      "start_stage": 0,
+      "hold_id": 0
+    },
+    "link": "wifi",
+    "clock_ready": true
+  },
+  {
+    "elapsed": 72.036,
+    "firmware": "0.9.1-tap-controls",
+    "memory": {
+      "free_internal": 102507,
+      "min_internal": 56523,
+      "largest_internal": 31744
+    },
+    "voice": {
+      "phase": 0,
+      "duration_ms": 0,
+      "error": "",
+      "unread": false,
+      "page_index": 0,
+      "page_count": 0,
+      "boot_pressed": false,
+      "boot_presses": 0,
+      "boot_queued": 0,
+      "boot_handled": 0,
+      "start_stage": 0,
+      "hold_id": 0
+    },
+    "link": "wifi",
+    "clock_ready": true
+  },
+  {
+    "elapsed": 77.167,
+    "firmware": "0.9.1-tap-controls",
+    "memory": {
+      "free_internal": 75311,
+      "min_internal": 56523,
+      "largest_internal": 31744
+    },
+    "voice": {
+      "phase": 0,
+      "duration_ms": 0,
+      "error": "",
+      "unread": false,
+      "page_index": 0,
+      "page_count": 0,
+      "boot_pressed": false,
+      "boot_presses": 0,
+      "boot_queued": 0,
+      "boot_handled": 0,
+      "start_stage": 0,
+      "hold_id": 0
+    },
+    "link": "wifi",
+    "clock_ready": true
+  },
+  {
+    "elapsed": 82.314,
+    "firmware": "0.9.1-tap-controls",
+    "memory": {
+      "free_internal": 102107,
+      "min_internal": 56523,
+      "largest_internal": 31744
+    },
+    "voice": {
+      "phase": 0,
+      "duration_ms": 0,
+      "error": "",
+      "unread": false,
+      "page_index": 0,
+      "page_count": 0,
+      "boot_pressed": false,
+      "boot_presses": 0,
+      "boot_queued": 0,
+      "boot_handled": 0,
+      "start_stage": 0,
+      "hold_id": 0
+    },
+    "link": "wifi",
+    "clock_ready": true
+  },
+  {
+    "elapsed": 83.277,
+    "raster": "raster avg=10110us(clear 540 + poly 9346 + rest) peak=19413us | frame gap peak=91853us | box=211x202"
+  },
+  {
+    "elapsed": 87.323,
+    "firmware": "0.9.1-tap-controls",
+    "memory": {
+      "free_internal": 99475,
+      "min_internal": 56523,
+      "largest_internal": 31744
+    },
+    "voice": {
+      "phase": 0,
+      "duration_ms": 0,
+      "error": "",
+      "unread": false,
+      "page_index": 0,
+      "page_count": 0,
+      "boot_pressed": false,
+      "boot_presses": 0,
+      "boot_queued": 0,
+      "boot_handled": 0,
+      "start_stage": 0,
+      "hold_id": 0
+    },
+    "link": "wifi",
+    "clock_ready": true
+  },
+  {
+    "elapsed": 92.522,
+    "firmware": "0.9.1-tap-controls",
+    "memory": {
+      "free_internal": 103363,
+      "min_internal": 56523,
+      "largest_internal": 31744
+    },
+    "voice": {
+      "phase": 0,
+      "duration_ms": 0,
+      "error": "",
+      "unread": false,
+      "page_index": 0,
+      "page_count": 0,
+      "boot_pressed": false,
+      "boot_presses": 0,
+      "boot_queued": 0,
+      "boot_handled": 0,
+      "start_stage": 0,
+      "hold_id": 0
+    },
+    "link": "wifi",
+    "clock_ready": true
+  },
+  {
+    "elapsed": 97.563,
+    "firmware": "0.9.1-tap-controls",
+    "memory": {
+      "free_internal": 71963,
+      "min_internal": 56523,
+      "largest_internal": 31744
+    },
+    "voice": {
+      "phase": 0,
+      "duration_ms": 0,
+      "error": "",
+      "unread": false,
+      "page_index": 0,
+      "page_count": 0,
+      "boot_pressed": false,
+      "boot_presses": 0,
+      "boot_queued": 0,
+      "boot_handled": 0,
+      "start_stage": 0,
+      "hold_id": 0
+    },
+    "link": "wifi",
+    "clock_ready": true
+  },
+  {
+    "elapsed": 102.593,
+    "firmware": "0.9.1-tap-controls",
+    "memory": {
+      "free_internal": 103259,
+      "min_internal": 55903,
+      "largest_internal": 31744
+    },
+    "voice": {
+      "phase": 0,
+      "duration_ms": 0,
+      "error": "",
+      "unread": false,
+      "page_index": 0,
+      "page_count": 0,
+      "boot_pressed": false,
+      "boot_presses": 0,
+      "boot_queued": 0,
+      "boot_handled": 0,
+      "start_stage": 0,
+      "hold_id": 0
+    },
+    "link": "wifi-down",
+    "clock_ready": true
+  },
+  {
+    "elapsed": 103.861,
+    "raster": "raster avg=10300us(clear 613 + poly 9460 + rest) peak=21171us | frame gap peak=88286us | box=212x202"
+  },
+  {
+    "elapsed": 107.66,
+    "firmware": "0.9.1-tap-controls",
+    "memory": {
+      "free_internal": 66967,
+      "min_internal": 55903,
+      "largest_internal": 29696
+    },
+    "voice": {
+      "phase": 0,
+      "duration_ms": 0,
+      "error": "",
+      "unread": false,
+      "page_index": 0,
+      "page_count": 0,
+      "boot_pressed": false,
+      "boot_presses": 0,
+      "boot_queued": 0,
+      "boot_handled": 0,
+      "start_stage": 0,
+      "hold_id": 0
+    },
+    "link": "wifi",
+    "clock_ready": true
+  }
+]

@@ -1,4 +1,5 @@
 #include "voice_ui.h"
+#include "voice_motion.h"
 #include "home_controls.h"
 
 #include "voice.h"
@@ -38,13 +39,12 @@ lv_obj_t *timer_label;
 lv_obj_t *hint;
 lv_obj_t *dot;
 lv_obj_t *level;
-lv_timer_t *refresh_timer;
 VoiceSnapshot drawn;
 bool initialized;
+bool was_covered;
 Button primary;
 Button secondary;
 Button previous;
-Button inbox;
 Button talk;
 uint32_t hold_id, hold_started;
 bool holding, hold_cancelled;
@@ -176,11 +176,11 @@ void set_button(Button &button, const char *text, VoiceAction action, int x)
     button.action = action;
     button.pressed = false;
     lv_label_set_text(button.label, text);
-    lv_obj_align(button.obj, LV_ALIGN_TOP_MID, x, 252);
+    lv_obj_align(button.obj, LV_ALIGN_TOP_MID, x, 276);
     lv_obj_remove_flag(button.obj, LV_OBJ_FLAG_HIDDEN);
 }
 
-void show_phase()
+void show_phase(bool covered)
 {
     lv_obj_add_flag(primary.obj, LV_OBJ_FLAG_HIDDEN);
     lv_obj_add_flag(secondary.obj, LV_OBJ_FLAG_HIDDEN);
@@ -193,8 +193,8 @@ void show_phase()
     lv_obj_set_flag(dot, LV_OBJ_FLAG_HIDDEN, !recording);
     lv_obj_set_flag(level, LV_OBJ_FLAG_HIDDEN, !recording);
     lv_obj_set_flag(timer_label, LV_OBJ_FLAG_HIDDEN, !audio);
-    lv_obj_align(title, LV_ALIGN_TOP_MID, 0, audio ? 61 : 79);
-    lv_obj_align(hint, LV_ALIGN_TOP_MID, 0, audio ? 173 : 145);
+    lv_obj_align(title, LV_ALIGN_TOP_MID, 0, 65);
+    lv_obj_align(hint, LV_ALIGN_TOP_MID, 0, audio ? 245 : 218);
     lv_obj_set_style_text_color(title, lv_color_hex(recording ? RED : INK), 0);
 
     switch (drawn.phase) {
@@ -210,17 +210,17 @@ void show_phase()
         break;
     case VoicePhase::Recording:
         lv_label_set_text(title, "正在录音");
-        lv_label_set_text(hint, drawn.hold_id ? "松开发送\n滑出按钮取消" : "再按 BOOT 停止并发送\n最长 30 秒");
+        lv_label_set_text(hint, drawn.hold_id ? "滑出按钮取消" : "再按 BOOT 停止并发送");
         if (!drawn.hold_id) set_button(primary, "取消录音", VoiceAction::Discard, 0);
         break;
     case VoicePhase::Ready:
         lv_label_set_text(title, "录音已就绪");
-        lv_label_set_text(hint, drawn.hold_id ? "已录满 30 秒\n松开发送" : "按 BOOT 发送录音\n发送前可以取消");
+        lv_label_set_text(hint, drawn.hold_id ? "已录满 30 秒" : "按 BOOT 发送录音");
         if (!drawn.hold_id) set_button(primary, "取消录音", VoiceAction::Discard, 0);
         break;
     case VoicePhase::Uploading:
         lv_label_set_text(title, "正在上传");
-        lv_label_set_text(hint, "录音正在传至 Mac\n请保持连接");
+        lv_obj_add_flag(hint, LV_OBJ_FLAG_HIDDEN);
         break;
     case VoicePhase::UploadFailed:
         lv_label_set_text(title, "连接状态未确认");
@@ -229,23 +229,23 @@ void show_phase()
         set_button(secondary, "返回", VoiceAction::Close, 63);
         break;
     case VoicePhase::Stored:
-        lv_label_set_text(title, "已存至 Mac");
-        lv_label_set_text(hint, "录音已保存\n等待处理");
+        lv_label_set_text(title, "等待处理");
+        lv_obj_add_flag(hint, LV_OBJ_FLAG_HIDDEN);
         set_button(primary, "返回", VoiceAction::Close, 0);
         break;
     case VoicePhase::Transcribing:
         lv_label_set_text(title, "正在转写");
-        lv_label_set_text(hint, "已存至 Mac\n正在识别语音");
+        lv_obj_add_flag(hint, LV_OBJ_FLAG_HIDDEN);
         set_button(primary, "返回", VoiceAction::Close, 0);
         break;
     case VoicePhase::Waiting:
-        lv_label_set_text(title, "等待 Grok 领取");
-        lv_label_set_text(hint, "在 Bot 中说\n处理圆屏语音");
+        lv_label_set_text(title, "等待接单");
+        lv_obj_add_flag(hint, LV_OBJ_FLAG_HIDDEN);
         set_button(primary, "返回", VoiceAction::Close, 0);
         break;
     case VoicePhase::Claimed:
-        lv_label_set_text(title, "Grok 已领取");
-        lv_label_set_text(hint, "等待回复\n可以稍后再来");
+        lv_label_set_text(title, "正在处理");
+        lv_obj_add_flag(hint, LV_OBJ_FLAG_HIDDEN);
         set_button(primary, "返回", VoiceAction::Close, 0);
         break;
     case VoicePhase::Replied:
@@ -261,9 +261,8 @@ void show_phase()
         set_button(primary, "返回", VoiceAction::Close, 0);
         break;
     case VoicePhase::LoadingPage:
-    case VoicePhase::MarkingRead:
-        lv_label_set_text(title, drawn.phase == VoicePhase::LoadingPage ? "正在读取回复" : "正在标记已读");
-        lv_label_set_text(hint, "请保持连接");
+        lv_label_set_text(title, "正在读取回复");
+        lv_obj_add_flag(hint, LV_OBJ_FLAG_HIDDEN);
         break;
     case VoicePhase::ReplyFailed:
         lv_label_set_text(title, "回复读取未确认");
@@ -272,8 +271,8 @@ void show_phase()
         set_button(secondary, "稍后", VoiceAction::Close, 63);
         break;
     case VoicePhase::ViewingReply:
-        lv_obj_align(title, LV_ALIGN_TOP_MID, 0, 39);
-        lv_label_set_text_fmt(title, "回复 %u / %u", drawn.page_index + 1, drawn.page_count);
+        if (drawn.error[0]) lv_label_set_text(title, "保存失败");
+        else lv_label_set_text_fmt(title, "回复 %u / %u", drawn.page_index + 1, drawn.page_count);
         lv_obj_add_flag(hint, LV_OBJ_FLAG_HIDDEN);
         if (!display_page) {
 #ifdef ESP_PLATFORM
@@ -293,6 +292,8 @@ void show_phase()
             page_descriptor.data = display_page;
             lv_image_set_src(page_image, &page_descriptor);
             lv_obj_remove_flag(page_image, LV_OBJ_FLAG_HIDDEN);
+            if (!covered) voice_motion_reveal(page_image);
+            else voice_motion_finish_reveal(page_image);
             const bool last = drawn.page_index + 1 == drawn.page_count;
             set_button(primary, last ? "已读" : "下页", last ? VoiceAction::MarkRead : VoiceAction::Next, 87);
             lv_obj_set_width(primary.obj, 78);
@@ -326,9 +327,17 @@ void show_phase()
     }
 }
 
-void refresh(lv_timer_t *)
+} // namespace
+
+VoicePresentation voice_ui_update(uint32_t now, bool covered)
 {
+    if (!root) return {covered ? CharacterMode::Covered : CharacterMode::Home};
     const VoiceSnapshot next = voice_snapshot();
+    const bool open_arriving_reply = initialized && !covered &&
+        next.phase == VoicePhase::Replied &&
+        (drawn.phase == VoicePhase::Uploading || drawn.phase == VoicePhase::Stored ||
+         drawn.phase == VoicePhase::Transcribing || drawn.phase == VoicePhase::Waiting ||
+         drawn.phase == VoicePhase::Claimed);
     const bool changed = !initialized || drawn.phase != next.phase ||
                          drawn.generation != next.generation ||
                          drawn.hold_id != next.hold_id ||
@@ -336,38 +345,38 @@ void refresh(lv_timer_t *)
     const bool time_changed = changed || drawn.duration_ms / 1000 != next.duration_ms / 1000;
     drawn = next;
     initialized = true;
-    lv_obj_set_flag(inbox.obj, LV_OBJ_FLAG_HIDDEN, holding || drawn.phase != VoicePhase::Idle || !drawn.unread);
+    if (covered && !was_covered) voice_motion_finish_reveal(page_image);
+    was_covered = covered;
     lv_obj_set_flag(talk.obj, LV_OBJ_FLAG_HIDDEN,
                     !holding && (drawn.phase != VoicePhase::Idle || !home_controls_visible()));
-    lv_label_set_text(talk.label, holding ? (hold_cancelled ? "已取消" : "松开发送") : "按住说话");
-    if (changed) inbox.pressed = false;
+    const char *talk_text = holding ? (hold_cancelled ? "已取消" : "松开发送") : "按住说话";
+    if (std::strcmp(lv_label_get_text(talk.label), talk_text)) lv_label_set_text(talk.label, talk_text);
+    lv_obj_set_style_opa(talk.obj, holding ? LV_OPA_COVER : home_controls_opacity(), 0);
     lv_obj_set_flag(root, LV_OBJ_FLAG_HIDDEN, drawn.phase == VoicePhase::Idle && !holding);
-    if (drawn.phase == VoicePhase::Idle && !holding) return;
-    if (changed) show_phase();
+    const float amplitude = voice_motion_update(drawn.phase, drawn.peak, now, !covered);
+    const bool reading = drawn.phase == VoicePhase::ViewingReply;
+    if (changed) lv_obj_set_style_bg_opa(root, reading ? LV_OPA_COVER : LV_OPA_TRANSP, 0);
+    VoicePresentation view;
+    view.phase = drawn.phase;
+    view.level = amplitude;
+    view.unread = drawn.unread;
+    if (holding && drawn.phase == VoicePhase::Idle)
+        view.hold = hold_cancelled ? HoldVisual::Cancelled : HoldVisual::Preparing;
+    view.mode = covered || reading ? CharacterMode::Covered :
+        voice_ui_active() ? CharacterMode::Voice : CharacterMode::Home;
+    if (drawn.phase == VoicePhase::Idle && !holding) return view;
+    if (changed) show_phase(covered);
+    if (open_arriving_reply) voice_action(VoiceAction::Open, drawn.generation);
     if (time_changed) {
         const unsigned seconds = drawn.duration_ms / 1000;
         lv_label_set_text_fmt(timer_label, "%02u:%02u / 00:30", seconds / 60, seconds % 60);
     }
-    if (drawn.phase == VoicePhase::Recording) {
-        lv_bar_set_value(level, drawn.peak > 32767 ? 32767 : drawn.peak, LV_ANIM_OFF);
-        lv_obj_set_style_opa(dot, (drawn.duration_ms / 500) % 2 ? LV_OPA_50 : LV_OPA_COVER, 0);
-    }
+    return view;
 }
-} // namespace
 
 void voice_ui_create(lv_obj_t *screen)
 {
     if (root) return;
-    make_button(inbox, screen);
-    lv_obj_add_event_cb(inbox.obj, [](lv_event_t *) {
-        inbox.obj = nullptr;
-        inbox.label = nullptr;
-        inbox.pressed = false;
-    }, LV_EVENT_DELETE, nullptr);
-    inbox.action = VoiceAction::Open;
-    lv_label_set_text(inbox.label, "未读回复");
-    lv_obj_set_size(inbox.obj, 116, 36);
-    lv_obj_align(inbox.obj, LV_ALIGN_BOTTOM_MID, 0, -94);
     root = lv_obj_create(screen);
     lv_obj_remove_style_all(root);
     isolate(root);
@@ -375,23 +384,23 @@ void voice_ui_create(lv_obj_t *screen)
     lv_obj_set_size(root, LV_PCT(100), LV_PCT(100));
     lv_obj_set_style_bg_color(root, lv_color_hex(PAPER), 0);
     lv_obj_set_style_bg_opa(root, LV_OPA_COVER, 0);
+    lv_obj_add_flag(root, LV_OBJ_FLAG_HIDDEN);
     lv_obj_add_event_cb(root, swallow, LV_EVENT_ALL, nullptr);
     lv_obj_add_event_cb(root, [](lv_event_t *) {
-        if (refresh_timer) lv_timer_delete(refresh_timer);
-        refresh_timer = nullptr;
+        voice_motion_reset();
         root = nullptr;
-        if (inbox.obj) lv_obj_delete(inbox.obj);
         if (talk.obj) lv_obj_delete(talk.obj);
         lv_image_set_src(page_image, nullptr);
         lv_image_cache_drop(&page_descriptor);
         free(display_page);
         display_page = nullptr;
         initialized = false;
+        was_covered = false;
     }, LV_EVENT_DELETE, nullptr);
 
-    title = make_label(61, 272, INK);
-    timer_label = make_label(104, 220, INK);
-    hint = make_label(173, 272, MUTED);
+    title = make_label(65, 272, INK);
+    timer_label = make_label(215, 220, INK);
+    hint = make_label(218, 272, MUTED);
     dot = lv_obj_create(root);
     lv_obj_remove_style_all(dot);
     isolate(dot);
@@ -399,17 +408,18 @@ void voice_ui_create(lv_obj_t *screen)
     lv_obj_set_style_radius(dot, LV_RADIUS_CIRCLE, 0);
     lv_obj_set_style_bg_color(dot, lv_color_hex(RED), 0);
     lv_obj_set_style_bg_opa(dot, LV_OPA_COVER, 0);
-    lv_obj_align(dot, LV_ALIGN_TOP_MID, -65, 73);
+    lv_obj_align(dot, LV_ALIGN_TOP_MID, -65, 77);
     level = lv_bar_create(root);
     isolate(level);
-    lv_obj_set_size(level, 160, 6);
-    lv_obj_align(level, LV_ALIGN_TOP_MID, 0, 149);
+    lv_obj_set_size(level, 120, 4);
+    lv_obj_align(level, LV_ALIGN_TOP_MID, 0, 207);
     lv_bar_set_range(level, 0, 32767);
     lv_obj_set_style_bg_color(level, lv_color_hex(0xd4cfc3), LV_PART_MAIN);
     lv_obj_set_style_bg_color(level, lv_color_hex(RED), LV_PART_INDICATOR);
+    voice_motion_create(level, dot);
     page_image = lv_image_create(root);
     isolate(page_image);
-    lv_obj_align(page_image, LV_ALIGN_TOP_MID, 0, 76);
+    lv_obj_align(page_image, LV_ALIGN_TOP_MID, 0, 96);
     make_button(previous);
     make_button(primary);
     make_button(secondary);
@@ -419,8 +429,7 @@ void voice_ui_create(lv_obj_t *screen)
     lv_obj_add_flag(talk.obj, LV_OBJ_FLAG_PRESS_LOCK);
     lv_obj_set_size(talk.obj, 176, 52);
     lv_obj_align(talk.obj, LV_ALIGN_BOTTOM_MID, 0, -32);
-    refresh(nullptr);
-    refresh_timer = lv_timer_create(refresh, 100, nullptr);
+    lv_obj_add_flag(talk.obj, LV_OBJ_FLAG_HIDDEN);
 }
 
 bool voice_ui_active()

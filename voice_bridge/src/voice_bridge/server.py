@@ -5,6 +5,7 @@ import socket
 import ssl
 import struct
 import threading
+import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 from .config import ConfigError, DEVICE_ID, authorized
@@ -12,6 +13,18 @@ from .store import RequestError
 
 MAX_AUDIO = 2_880_044
 ROUTE = re.compile(r"/v1/recordings/([0-9a-fA-F]{32})(/(?:retry|read)|/pages/[0-9]{1,3})?")
+
+
+def read_exclusions(headers):
+    values = headers.get_all("X-Voice-Read-Exclude", [])
+    if not values:
+        return ()
+    if len(values) != 1 or len(values[0]) > 527:
+        raise RequestError(400, "invalid_read_exclusions")
+    ids = values[0].split(",")
+    if len(ids) > 16 or any(not re.fullmatch(r"[0-9a-fA-F]{32}", rid) for rid in ids):
+        raise RequestError(400, "invalid_read_exclusions")
+    return tuple(dict.fromkeys(rid.lower() for rid in ids))
 
 
 def validate_wav(audio):
@@ -129,17 +142,19 @@ class Handler(BaseHTTPRequestHandler):
                 if (len(self.headers.get_all("Content-Type", [])) != 1
                         or self.headers.get("Content-Type", "").lower() != "audio/wav"):
                     raise RequestError(415, "audio_wav_required")
+                upload_started = time.monotonic_ns()
                 audio = self.rfile.read(length)
+                upload_ms = (time.monotonic_ns() - upload_started) / 1e6
                 if len(audio) != length:
                     raise RequestError(400, "incomplete_body")
                 validate_wav(audio)
-                status, body = self.server.store.put(request_id, device, audio)
+                status, body = self.server.store.put(request_id, device, audio, upload_ms=upload_ms)
             elif length:
                 raise RequestError(400, "body_not_allowed")
             elif self.command == "GET" and action is None:
                 status, body = 200, self.server.store.get(request_id, device)
             elif self.command == "GET" and inbox:
-                status, body = 200, self.server.store.inbox(device)
+                status, body = 200, self.server.store.inbox(device, read_exclusions(self.headers))
             elif self.command == "GET" and action and action.startswith("/pages/"):
                 status, body = 200, self.server.store.page(request_id, device, int(action.rsplit("/", 1)[1]))
             elif self.command == "POST" and action == "/retry":

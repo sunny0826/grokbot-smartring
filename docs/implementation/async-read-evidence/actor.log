@@ -1,0 +1,48 @@
+Build and evidence: /private/tmp/my-bot-async-read-probe/permanent
+-- Configuring done (0.1s)
+-- Generating done (0.0s)
+-- Build files have been written to: /private/tmp/my-bot-async-read-probe/permanent/build
+[ 98%] Built target lvgl
+[ 98%] Building CXX object CMakeFiles/actor.dir/scenarios.cpp.o
+[ 98%] Linking CXX executable actor
+[100%] Built target actor
+PASS read-hold: real actor; reads=1 inboxes=1 commits=3 failed_commits=0
+all_host_tasks_joined=true
+PASS read-boot: real actor; reads=1 inboxes=1 commits=3 failed_commits=0
+all_host_tasks_joined=true
+PASS inbox-hold: real actor; reads=0 inboxes=1 commits=0 failed_commits=0
+all_host_tasks_joined=true
+PASS inbox-boot: real actor; reads=0 inboxes=1 commits=0 failed_commits=0
+all_host_tasks_joined=true
+PASS late-read: real actor; reads=1 inboxes=0 commits=4 failed_commits=0
+all_host_tasks_joined=true
+PASS stale-inbox: real actor; reads=0 inboxes=2 commits=0 failed_commits=0
+all_host_tasks_joined=true
+PASS scope-ready: real actor; reads=0 inboxes=0 commits=1 failed_commits=0
+all_host_tasks_joined=true
+PASS corrupt-start: real actor; reads=0 inboxes=0 commits=0 failed_commits=0
+all_host_tasks_joined=true
+PASS save-failure: real actor; reads=1 inboxes=0 commits=2 failed_commits=1
+all_host_tasks_joined=true
+PASS delete-failure: real actor; reads=2 inboxes=2 commits=3 failed_commits=1
+all_host_tasks_joined=true
+PASS multi-unread: real actor; reads=1 inboxes=2 commits=3 failed_commits=0
+all_host_tasks_joined=true
+PASS ui: real actor; reads=1 inboxes=0 commits=2 failed_commits=0
+all_host_tasks_joined=true
+PASS ui-save-failure: real actor; reads=1 inboxes=0 commits=2 failed_commits=1
+all_host_tasks_joined=true
+PASS restart-write: real actor; reads=1 inboxes=0 commits=2 failed_commits=0
+all_host_tasks_joined=true
+PASS restart-read: real actor; reads=1 inboxes=0 commits=0 failed_commits=0
+all_host_tasks_joined=true
+PASS restart-confirm: real actor; reads=1 inboxes=1 commits=1 failed_commits=0
+all_host_tasks_joined=true
+PASS restart-empty: real actor; reads=0 inboxes=1 commits=0 failed_commits=0
+all_host_tasks_joined=true
+Preview: /private/tmp/my-bot-async-read-probe/permanent/ui-before-failure.png
+Preview: /private/tmp/my-bot-async-read-probe/permanent/ui-before-read.png
+Preview: /private/tmp/my-bot-async-read-probe/permanent/ui-read-home.png
+Preview: /private/tmp/my-bot-async-read-probe/permanent/ui-save-failure.png
+Preview: /private/tmp/my-bot-async-read-probe/permanent/ui-save-retry-home.png
+PASS: 17 isolated processes; all host tasks joined

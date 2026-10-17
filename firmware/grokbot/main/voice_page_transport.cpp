@@ -4,12 +4,13 @@
 #include <cstdio>
 #include <cstdlib>
 
-uint8_t *voice_download_page(const char *request_id, uint16_t index, uint16_t count)
+uint8_t *voice_download_page(const char *request_id, uint16_t index, uint16_t count,
+                             const VoiceScope *scope)
 {
     if (!count || count > VOICE_PAGE_LIMIT || index >= count) return nullptr;
     char path[128];
     snprintf(path, sizeof(path), "/v1/recordings/%s/pages/%u", request_id, index);
-    VoiceHttp http(path, HTTP_METHOD_GET);
+    VoiceHttp http(path, HTTP_METHOD_GET, 8000, 1024, scope);
     auto client = http.client;
     constexpr size_t size = VOICE_PAGE_HEADER + VOICE_PAGE_BYTES;
     if (!client || esp_http_client_open(client, 0) != ESP_OK ||

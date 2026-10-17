@@ -7,6 +7,7 @@
 #include "bot_render.h"
 
 enum class BotState : int { Idle = 0, Thinking, Notify, Orbit, Sleepy, Happy, Dizzy, COUNT };
+enum class PosePlayback { OneShot, Continuous };
 
 /* Pose: parameters of every drawable element at a given instant.
  * Poses are interpolated with blendPose for morphs (bloub's morph durations). */
@@ -44,7 +45,7 @@ extern const StateDefC CAROUSEL[];
 extern const int CAROUSEL_LEN;
 
 // Evaluate a state's pose at local time t
-void poseFor(BotState s, float t, BotPose &out);
+void poseFor(BotState s, float t, BotPose &out, PosePlayback playback = PosePlayback::OneShot);
 
 // Linear pose interpolation (k=0 -> a, k=1 -> b)
 void blendPose(BotPose &out, const BotPose &a, const BotPose &b, float k);

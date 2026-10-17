@@ -2,11 +2,34 @@
 // SDF ellipse/capsule fills, and 3D-projected orbit arcs.
 #pragma once
 #include <cstdint>
+#include <algorithm>
+
+struct PixelRect {
+    int x1 = 0, y1 = 0, x2 = -1, y2 = -1;
+    bool empty() const { return x1 > x2 || y1 > y2; }
+    int area() const { return empty() ? 0 : (x2 - x1 + 1) * (y2 - y1 + 1); }
+    void include(PixelRect other) {
+        if (other.empty()) return;
+        if (empty()) { *this = other; return; }
+        x1 = std::min(x1, other.x1);
+        y1 = std::min(y1, other.y1);
+        x2 = std::max(x2, other.x2);
+        y2 = std::max(y2, other.y2);
+    }
+};
 
 struct Fb {
     uint16_t *px;
     int w, h;
+    PixelRect *writes = nullptr;
 };
+
+inline void fb_track(Fb &fb, int x1, int y1, int x2, int y2)
+{
+    if (fb.writes)
+        fb.writes->include({std::max(0, x1), std::max(0, y1),
+                            std::min(fb.w - 1, x2), std::min(fb.h - 1, y2)});
+}
 
 inline uint16_t rgb565(uint8_t r, uint8_t g, uint8_t b)
 {

@@ -1,0 +1,310 @@
+[
+  {
+    "elapsed": 2.46,
+    "firmware": "0.12.2-avatar-inbox",
+    "memory": {
+      "free_internal": 164067,
+      "min_internal": 164003,
+      "largest_internal": 90112
+    },
+    "voice": {
+      "phase": 0,
+      "duration_ms": 0,
+      "error": "",
+      "unread": false,
+      "page_index": 0,
+      "page_count": 0,
+      "boot_pressed": false,
+      "boot_presses": 0,
+      "boot_queued": 0,
+      "boot_handled": 0,
+      "start_stage": 0,
+      "hold_id": 0
+    },
+    "display": {
+      "last_active_fps": 0
+    },
+    "link": "wifi-down",
+    "clock_ready": true
+  },
+  {
+    "elapsed": 5.149,
+    "firmware": "0.12.2-avatar-inbox",
+    "memory": {
+      "free_internal": 137407,
+      "min_internal": 133643,
+      "largest_internal": 63488
+    },
+    "voice": {
+      "phase": 0,
+      "duration_ms": 0,
+      "error": "",
+      "unread": false,
+      "page_index": 0,
+      "page_count": 0,
+      "boot_pressed": false,
+      "boot_presses": 0,
+      "boot_queued": 0,
+      "boot_handled": 0,
+      "start_stage": 0,
+      "hold_id": 0
+    },
+    "display": {
+      "last_active_fps": 20
+    },
+    "link": "wifi-down",
+    "clock_ready": true
+  },
+  {
+    "elapsed": 10.158,
+    "firmware": "0.12.2-avatar-inbox",
+    "memory": {
+      "free_internal": 127351,
+      "min_internal": 124467,
+      "largest_internal": 55296
+    },
+    "voice": {
+      "phase": 0,
+      "duration_ms": 0,
+      "error": "",
+      "unread": false,
+      "page_index": 0,
+      "page_count": 0,
+      "boot_pressed": false,
+      "boot_presses": 0,
+      "boot_queued": 0,
+      "boot_handled": 0,
+      "start_stage": 0,
+      "hold_id": 0
+    },
+    "display": {
+      "last_active_fps": 20
+    },
+    "link": "wifi-down",
+    "clock_ready": true
+  },
+  {
+    "elapsed": 15.285,
+    "firmware": "0.12.2-avatar-inbox",
+    "memory": {
+      "free_internal": 66039,
+      "min_internal": 60363,
+      "largest_internal": 28672
+    },
+    "voice": {
+      "phase": 0,
+      "duration_ms": 0,
+      "error": "",
+      "unread": false,
+      "page_index": 0,
+      "page_count": 0,
+      "boot_pressed": false,
+      "boot_presses": 0,
+      "boot_queued": 0,
+      "boot_handled": 0,
+      "start_stage": 0,
+      "hold_id": 0
+    },
+    "display": {
+      "last_active_fps": 20
+    },
+    "link": "wifi-down",
+    "clock_ready": true
+  },
+  {
+    "elapsed": 20.338,
+    "firmware": "0.12.2-avatar-inbox",
+    "memory": {
+      "free_internal": 136231,
+      "min_internal": 58631,
+      "largest_internal": 31744
+    },
+    "voice": {
+      "phase": 0,
+      "duration_ms": 0,
+      "error": "",
+      "unread": true,
+      "page_index": 0,
+      "page_count": 0,
+      "boot_pressed": false,
+      "boot_presses": 0,
+      "boot_queued": 0,
+      "boot_handled": 0,
+      "start_stage": 0,
+      "hold_id": 0
+    },
+    "display": {
+      "last_active_fps": 20
+    },
+    "link": "wifi-down",
+    "clock_ready": true
+  },
+  {
+    "elapsed": 25.595,
+    "firmware": "0.12.2-avatar-inbox",
+    "memory": {
+      "free_internal": 63935,
+      "min_internal": 58631,
+      "largest_internal": 27648
+    },
+    "voice": {
+      "phase": 0,
+      "duration_ms": 0,
+      "error": "",
+      "unread": true,
+      "page_index": 0,
+      "page_count": 0,
+      "boot_pressed": false,
+      "boot_presses": 0,
+      "boot_queued": 0,
+      "boot_handled": 0,
+      "start_stage": 0,
+      "hold_id": 0
+    },
+    "display": {
+      "last_active_fps": 20
+    },
+    "link": "wifi-down",
+    "clock_ready": true
+  },
+  {
+    "elapsed": 30.771,
+    "firmware": "0.12.2-avatar-inbox",
+    "memory": {
+      "free_internal": 135891,
+      "min_internal": 57155,
+      "largest_internal": 31744
+    },
+    "voice": {
+      "phase": 0,
+      "duration_ms": 0,
+      "error": "",
+      "unread": true,
+      "page_index": 0,
+      "page_count": 0,
+      "boot_pressed": false,
+      "boot_presses": 0,
+      "boot_queued": 0,
+      "boot_handled": 0,
+      "start_stage": 0,
+      "hold_id": 0
+    },
+    "display": {
+      "last_active_fps": 20
+    },
+    "link": "wifi-down",
+    "clock_ready": true
+  },
+  {
+    "elapsed": 35.814,
+    "firmware": "0.12.2-avatar-inbox",
+    "memory": {
+      "free_internal": 63315,
+      "min_internal": 56695,
+      "largest_internal": 28672
+    },
+    "voice": {
+      "phase": 0,
+      "duration_ms": 0,
+      "error": "",
+      "unread": true,
+      "page_index": 0,
+      "page_count": 0,
+      "boot_pressed": false,
+      "boot_presses": 0,
+      "boot_queued": 0,
+      "boot_handled": 0,
+      "start_stage": 0,
+      "hold_id": 0
+    },
+    "display": {
+      "last_active_fps": 19
+    },
+    "link": "wifi-down",
+    "clock_ready": true
+  },
+  {
+    "elapsed": 40.852,
+    "firmware": "0.12.2-avatar-inbox",
+    "memory": {
+      "free_internal": 101111,
+      "min_internal": 55475,
+      "largest_internal": 31744
+    },
+    "voice": {
+      "phase": 0,
+      "duration_ms": 0,
+      "error": "",
+      "unread": true,
+      "page_index": 0,
+      "page_count": 0,
+      "boot_pressed": false,
+      "boot_presses": 0,
+      "boot_queued": 0,
+      "boot_handled": 0,
+      "start_stage": 0,
+      "hold_id": 0
+    },
+    "display": {
+      "last_active_fps": 20
+    },
+    "link": "wifi",
+    "clock_ready": true
+  },
+  {
+    "elapsed": 45.993,
+    "firmware": "0.12.2-avatar-inbox",
+    "memory": {
+      "free_internal": 63655,
+      "min_internal": 55475,
+      "largest_internal": 28672
+    },
+    "voice": {
+      "phase": 0,
+      "duration_ms": 0,
+      "error": "",
+      "unread": true,
+      "page_index": 0,
+      "page_count": 0,
+      "boot_pressed": false,
+      "boot_presses": 0,
+      "boot_queued": 0,
+      "boot_handled": 0,
+      "start_stage": 0,
+      "hold_id": 0
+    },
+    "display": {
+      "last_active_fps": 20
+    },
+    "link": "wifi",
+    "clock_ready": true
+  },
+  {
+    "elapsed": 51.079,
+    "firmware": "0.12.2-avatar-inbox",
+    "memory": {
+      "free_internal": 100951,
+      "min_internal": 55363,
+      "largest_internal": 31744
+    },
+    "voice": {
+      "phase": 0,
+      "duration_ms": 0,
+      "error": "",
+      "unread": true,
+      "page_index": 0,
+      "page_count": 0,
+      "boot_pressed": false,
+      "boot_presses": 0,
+      "boot_queued": 0,
+      "boot_handled": 0,
+      "start_stage": 0,
+      "hold_id": 0
+    },
+    "display": {
+      "last_active_fps": 20
+    },
+    "link": "wifi",
+    "clock_ready": true
+  }
+]

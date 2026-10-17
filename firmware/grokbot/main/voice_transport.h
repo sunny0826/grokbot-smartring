@@ -1,6 +1,7 @@
 #pragma once
 #include "voice.h"
 #include "voice_page.h"
+#include "voice_receipt.h"
 enum class VoiceRequest { Upload, Status, Retry, Inbox, Read };
 struct VoiceReply {
     bool ok = false;
@@ -12,5 +13,7 @@ struct VoiceReply {
 };
 VoiceReply voice_decode(const char *body, const char *expected_id);
 VoiceReply voice_exchange(VoiceRequest request, const char *request_id,
-                         const int16_t *samples = nullptr, size_t count = 0);
-uint8_t *voice_download_page(const char *request_id, uint16_t index, uint16_t count);
+                         const int16_t *samples = nullptr, size_t count = 0,
+                         const VoiceScope *scope = nullptr, const VoiceReadExclusions *excluded = nullptr);
+uint8_t *voice_download_page(const char *request_id, uint16_t index, uint16_t count,
+                             const VoiceScope *scope = nullptr);

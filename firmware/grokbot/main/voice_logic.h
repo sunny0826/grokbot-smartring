@@ -88,7 +88,7 @@ inline VoiceIntent voice_intent(VoicePhase phase, VoiceAction action)
         (phase == VoicePhase::Recording || phase == VoicePhase::Ready)) return VoiceIntent::Discard;
     if (action == VoiceAction::Close && phase != VoicePhase::Recording &&
         phase != VoicePhase::Ready && phase != VoicePhase::Uploading &&
-        phase != VoicePhase::LoadingPage && phase != VoicePhase::MarkingRead) return VoiceIntent::Close;
+        phase != VoicePhase::LoadingPage) return VoiceIntent::Close;
     return VoiceIntent::None;
 }
 

@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>圆屏整体提速 · 实测结果</title>
+<style>
+:root{color-scheme:light;--paper:#f4f1e8;--ink:#213c36;--muted:#66786d;--green:#68886c;--orange:#c48b64;--line:#d4dacb}*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:17px/1.6 system-ui,-apple-system,"PingFang SC",sans-serif}main{max-width:1000px;margin:auto;padding:48px 28px 70px}.eyebrow,small{font-size:13px;color:var(--muted)}h1{font-size:clamp(36px,6vw,64px);line-height:1.15;letter-spacing:-.04em;margin:20px 0}h2{font-size:25px;margin:0 0 25px}.lead{font-size:20px;color:var(--muted)}section{padding:36px 0;border-top:1px solid var(--line)}header{padding-bottom:34px}.metrics{display:flex;gap:55px;flex-wrap:wrap;margin:30px 0 0}.metric strong{font-size:52px;line-height:1.2;display:block;letter-spacing:-.05em}.metric small{display:block}.rows{display:grid;gap:20px}.row{display:grid;grid-template-columns:72px 1fr 96px;align-items:center;gap:18px}.track{height:52px;background:#e3e6da}.bar{height:100%;background:var(--green)}.old{background:var(--orange)}.row b{font-size:24px}.ticks{display:flex;justify-content:space-between;color:var(--muted);font-size:12px;margin:7px 114px 0 90px}.note{font-size:14px;color:var(--muted)}.flow{display:flex;gap:15px;align-items:center;font-size:24px;margin:25px 0}.flow span{border-bottom:3px solid var(--green);padding:8px 0}.flow i{color:var(--muted);font-style:normal}.runs{display:flex;gap:16px;flex-wrap:wrap;margin:24px 0}.run{min-width:70px}.run b{font-size:28px}.run small{display:block}a{color:var(--ink);text-underline-offset:4px}footer{border-top:1px solid var(--line);padding-top:24px;font-size:14px;color:var(--muted)}@media(max-width:600px){main{padding:28px 20px}.metrics{gap:28px}.metric strong{font-size:42px}.row{grid-template-columns:50px 1fr 78px;gap:10px}.row b{font-size:19px}.track{height:42px}.ticks{margin-left:60px;margin-right:88px}.flow{font-size:20px}}
+</style>
+</head>
+<body><main>
+<header><div class="eyebrow">MY BOT · 2026.10.17 · 固件 0.11.0</div>
+<h1>圆屏更流畅。<br>回复少走两步。</h1><p class="lead">局部刷新和原 Bot 流程已更新，实机对照已完成。</p>
+<div class="metrics"><div class="metric"><strong>+49%</strong><small>固定轨迹完成帧率</small></div><div class="metric"><strong>−56%</strong><small>每帧屏幕传输量</small></div><div class="metric"><strong>26.9s</strong><small>五次语音回复中位数</small></div></div></header>
+<section><h2>同一段动画，现在每秒多完成约 6 帧</h2>
+<div class="rows"><div class="row"><span>旧路径</span><div class="track"><div class="bar old" style="width:39.373%"></div></div><b>11.8 fps</b></div><div class="row"><span>新路径</span><div class="track"><div class="bar" style="width:58.855%"></div></div><b>17.7 fps</b></div></div><div class="ticks"><span>0</span><span>目标 30 fps</span></div>
+<p class="note">同设备、同二进制，三皮肤固定轨迹，每侧五段交错测试。尚未达到30fps；不代表全部姿态或录音并发场景。</p></section>
+<section><h2>正常回复只走两个设备工具步骤</h2><div class="flow"><span>直接领取</span><i>→</i><span>保存圆屏回复</span></div>
+<div class="runs"><div class="run"><b>26.94</b><small>第1次 · 秒</small></div><div class="run"><b>23.00</b><small>第2次 · 秒</small></div><div class="run"><b>28.29</b><small>第3次 · 秒</small></div><div class="run"><b>29.78</b><small>第4次 · 秒</small></div><div class="run"><b>24.91</b><small>第5次 · 秒</small></div></div>
+<p class="note">相同合成短句，从服务端收存到回复保存。五次均自动完成，首屏数据通过校验。不是按键到实体显示时间，也不是严格旧/新语音速度对照。</p></section>
+<section><h2>做完了什么，还差什么</h2><p>逐像素、真实LVGL界面、物理运动和故障恢复检查通过。正式固件已烧录，云端任务保留原有记忆、工具和操作规则。</p><p class="note">烧录后复验为36.9秒，云端仍占主要等待，不能保证稳定低于30秒。实体录音、手势与首屏观感待实际体验；当前没有承诺30fps或几秒内回复。</p></section>
+<footer><a href="overall-throughput.md">完整执行记录</a> · <a href="../analysis/voice-throughput-evidence/display-ab-summary.json">帧率计算</a> · <a href="../analysis/voice-throughput-evidence/voice-current-five-runs.json">语音五次实测</a><br>基线 HEAD 0b60829 · 工作区改动尚未提交/推送</footer>
+</main></body></html>

@@ -5,6 +5,7 @@ bool visible;
 bool tracking, moved;
 lv_point_t origin;
 uint32_t started;
+uint32_t shown_at;
 
 void touch(lv_event_t *event)
 {
@@ -23,6 +24,7 @@ void touch(lv_event_t *event)
         moved = moved || dx * dx + dy * dy > 40 * 40;
         if (code == LV_EVENT_RELEASED) {
             if (!moved && lv_tick_elaps(started) < 400) {
+                if (!visible) shown_at = lv_tick_get();
                 visible = true;
                 lv_display_trigger_activity(lv_obj_get_display(lv_event_get_target_obj(event)));
             }
@@ -41,4 +43,14 @@ bool home_controls_visible()
 {
     if (visible && lv_display_get_inactive_time(nullptr) >= 10000) visible = false;
     return visible;
+}
+
+lv_opa_t home_controls_opacity()
+{
+    if (!home_controls_visible()) return LV_OPA_TRANSP;
+    const uint32_t elapsed = lv_tick_elaps(shown_at);
+    const uint32_t inactive = lv_display_get_inactive_time(nullptr);
+    const uint32_t fade_in = elapsed < 150 ? elapsed * LV_OPA_COVER / 150 : LV_OPA_COVER;
+    const uint32_t fade_out = inactive > 9800 ? (10000 - inactive) * LV_OPA_COVER / 200 : LV_OPA_COVER;
+    return static_cast<lv_opa_t>(fade_in < fade_out ? fade_in : fade_out);
 }

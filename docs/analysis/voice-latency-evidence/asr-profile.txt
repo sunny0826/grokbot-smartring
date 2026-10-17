@@ -1,0 +1,33 @@
+         1395 function calls in 0.881 seconds
+
+   Ordered by: cumulative time
+   List reduced from 233 to 25 due to restriction <25>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        2    0.000    0.000    0.595    0.298 /tmp/my-bot-latency/bench.py:12(<genexpr>)
+        2    0.000    0.000    0.595    0.298 /Users/guoxudong/codes/my-bot/voice_bridge/.venv/lib/python3.12/site-packages/faster_whisper/transcribe.py:1844(restore_speech_timestamps)
+        2    0.000    0.000    0.595    0.298 /Users/guoxudong/codes/my-bot/voice_bridge/.venv/lib/python3.12/site-packages/faster_whisper/transcribe.py:1103(generate_segments)
+        2    0.534    0.267    0.534    0.267 /Users/guoxudong/codes/my-bot/voice_bridge/.venv/lib/python3.12/site-packages/faster_whisper/transcribe.py:1391(encode)
+        1    0.310    0.310    0.310    0.310 /Users/guoxudong/codes/my-bot/voice_bridge/.venv/lib/python3.12/site-packages/faster_whisper/transcribe.py:1402(generate_with_fallback)
+        1    0.000    0.000    0.034    0.034 /Users/guoxudong/codes/my-bot/voice_bridge/.venv/lib/python3.12/site-packages/faster_whisper/vad.py:45(get_speech_timestamps)
+        1    0.000    0.000    0.034    0.034 /Users/guoxudong/codes/my-bot/voice_bridge/.venv/lib/python3.12/site-packages/faster_whisper/vad.py:316(__call__)
+        1    0.000    0.000    0.022    0.022 /Users/guoxudong/codes/my-bot/voice_bridge/.venv/lib/python3.12/site-packages/faster_whisper/audio.py:19(decode_audio)
+        1    0.012    0.012    0.012    0.012 {av.container.core.open}
+        1    0.012    0.012    0.012    0.012 /Users/guoxudong/codes/my-bot/voice_bridge/.venv/lib/python3.12/site-packages/onnxruntime/capi/onnxruntime_inference_collection.py:372(run)
+        1    0.007    0.007    0.007    0.007 {built-in method gc.collect}
+        3    0.000    0.000    0.002    0.001 /Users/guoxudong/codes/my-bot/voice_bridge/.venv/lib/python3.12/site-packages/faster_whisper/audio.py:105(_resample_frames)
+        2    0.002    0.001    0.002    0.001 {method 'resample' of 'av.audio.resampler.AudioResampler' objects}
+        1    0.000    0.000    0.001    0.001 /Users/guoxudong/codes/my-bot/voice_bridge/.venv/lib/python3.12/site-packages/faster_whisper/feature_extractor.py:198(__call__)
+        1    0.000    0.000    0.001    0.001 /Users/guoxudong/codes/my-bot/voice_bridge/.venv/lib/python3.12/site-packages/faster_whisper/transcribe.py:1884(get_suppressed_tokens)
+        9    0.000    0.000    0.001    0.000 /Users/guoxudong/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/functools.py:982(__get__)
+        1    0.000    0.000    0.001    0.001 /Users/guoxudong/codes/my-bot/voice_bridge/.venv/lib/python3.12/site-packages/faster_whisper/tokenizer.py:114(non_speech_tokens)
+        1    0.000    0.000    0.001    0.001 /Users/guoxudong/codes/my-bot/voice_bridge/.venv/lib/python3.12/site-packages/faster_whisper/feature_extractor.py:67(stft)
+      110    0.000    0.000    0.001    0.000 /Users/guoxudong/codes/my-bot/voice_bridge/.venv/lib/python3.12/site-packages/faster_whisper/tokenizer.py:92(encode)
+      110    0.000    0.000    0.000    0.000 {method 'encode' of 'tokenizers.Tokenizer' objects}
+        5    0.000    0.000    0.000    0.000 /Users/guoxudong/codes/my-bot/voice_bridge/.venv/lib/python3.12/site-packages/numpy/lib/_arraypad_impl.py:546(pad)
+        1    0.000    0.000    0.000    0.000 /Users/guoxudong/codes/my-bot/voice_bridge/.venv/lib/python3.12/site-packages/numpy/fft/_pocketfft.py:324(rfft)
+        1    0.000    0.000    0.000    0.000 /Users/guoxudong/codes/my-bot/voice_bridge/.venv/lib/python3.12/site-packages/numpy/fft/_pocketfft.py:58(_raw_fft)
+        2    0.000    0.000    0.000    0.000 /Users/guoxudong/codes/my-bot/voice_bridge/.venv/lib/python3.12/site-packages/faster_whisper/audio.py:91(_group_frames)
+        2    0.000    0.000    0.000    0.000 /Users/guoxudong/codes/my-bot/voice_bridge/.venv/lib/python3.12/site-packages/faster_whisper/audio.py:111(pad_or_trim)
+
+

@@ -1,0 +1,310 @@
+[
+  {
+    "elapsed": 2.453,
+    "firmware": "0.11.0-partial-refresh",
+    "memory": {
+      "free_internal": 162951,
+      "min_internal": 162887,
+      "largest_internal": 90112
+    },
+    "voice": {
+      "phase": 0,
+      "duration_ms": 0,
+      "error": "",
+      "unread": false,
+      "page_index": 0,
+      "page_count": 0,
+      "boot_pressed": false,
+      "boot_presses": 0,
+      "boot_queued": 0,
+      "boot_handled": 0,
+      "start_stage": 0,
+      "hold_id": 0
+    },
+    "display": {
+      "last_active_fps": 0
+    },
+    "link": "wifi-down",
+    "clock_ready": true
+  },
+  {
+    "elapsed": 5.057,
+    "firmware": "0.11.0-partial-refresh",
+    "memory": {
+      "free_internal": 100315,
+      "min_internal": 99051,
+      "largest_internal": 31744
+    },
+    "voice": {
+      "phase": 0,
+      "duration_ms": 0,
+      "error": "",
+      "unread": false,
+      "page_index": 0,
+      "page_count": 0,
+      "boot_pressed": false,
+      "boot_presses": 0,
+      "boot_queued": 0,
+      "boot_handled": 0,
+      "start_stage": 0,
+      "hold_id": 0
+    },
+    "display": {
+      "last_active_fps": 20
+    },
+    "link": "wifi-down",
+    "clock_ready": true
+  },
+  {
+    "elapsed": 10.299,
+    "firmware": "0.11.0-partial-refresh",
+    "memory": {
+      "free_internal": 97607,
+      "min_internal": 58591,
+      "largest_internal": 31744
+    },
+    "voice": {
+      "phase": 0,
+      "duration_ms": 0,
+      "error": "",
+      "unread": false,
+      "page_index": 0,
+      "page_count": 0,
+      "boot_pressed": false,
+      "boot_presses": 0,
+      "boot_queued": 0,
+      "boot_handled": 0,
+      "start_stage": 0,
+      "hold_id": 0
+    },
+    "display": {
+      "last_active_fps": 22
+    },
+    "link": "wifi-down",
+    "clock_ready": true
+  },
+  {
+    "elapsed": 15.368,
+    "firmware": "0.11.0-partial-refresh",
+    "memory": {
+      "free_internal": 102151,
+      "min_internal": 58539,
+      "largest_internal": 31744
+    },
+    "voice": {
+      "phase": 0,
+      "duration_ms": 0,
+      "error": "",
+      "unread": true,
+      "page_index": 0,
+      "page_count": 0,
+      "boot_pressed": false,
+      "boot_presses": 0,
+      "boot_queued": 0,
+      "boot_handled": 0,
+      "start_stage": 0,
+      "hold_id": 0
+    },
+    "display": {
+      "last_active_fps": 20
+    },
+    "link": "wifi",
+    "clock_ready": true
+  },
+  {
+    "elapsed": 20.586,
+    "firmware": "0.11.0-partial-refresh",
+    "memory": {
+      "free_internal": 101619,
+      "min_internal": 55875,
+      "largest_internal": 28672
+    },
+    "voice": {
+      "phase": 0,
+      "duration_ms": 0,
+      "error": "",
+      "unread": true,
+      "page_index": 0,
+      "page_count": 0,
+      "boot_pressed": false,
+      "boot_presses": 0,
+      "boot_queued": 0,
+      "boot_handled": 0,
+      "start_stage": 0,
+      "hold_id": 0
+    },
+    "display": {
+      "last_active_fps": 20
+    },
+    "link": "wifi",
+    "clock_ready": true
+  },
+  {
+    "elapsed": 25.786,
+    "firmware": "0.11.0-partial-refresh",
+    "memory": {
+      "free_internal": 94363,
+      "min_internal": 55875,
+      "largest_internal": 31744
+    },
+    "voice": {
+      "phase": 0,
+      "duration_ms": 0,
+      "error": "",
+      "unread": true,
+      "page_index": 0,
+      "page_count": 0,
+      "boot_pressed": false,
+      "boot_presses": 0,
+      "boot_queued": 0,
+      "boot_handled": 0,
+      "start_stage": 0,
+      "hold_id": 0
+    },
+    "display": {
+      "last_active_fps": 20
+    },
+    "link": "wifi",
+    "clock_ready": true
+  },
+  {
+    "elapsed": 30.995,
+    "firmware": "0.11.0-partial-refresh",
+    "memory": {
+      "free_internal": 103019,
+      "min_internal": 55519,
+      "largest_internal": 31744
+    },
+    "voice": {
+      "phase": 0,
+      "duration_ms": 0,
+      "error": "",
+      "unread": true,
+      "page_index": 0,
+      "page_count": 0,
+      "boot_pressed": false,
+      "boot_presses": 0,
+      "boot_queued": 0,
+      "boot_handled": 0,
+      "start_stage": 0,
+      "hold_id": 0
+    },
+    "display": {
+      "last_active_fps": 20
+    },
+    "link": "wifi",
+    "clock_ready": true
+  },
+  {
+    "elapsed": 36.043,
+    "firmware": "0.11.0-partial-refresh",
+    "memory": {
+      "free_internal": 69891,
+      "min_internal": 55519,
+      "largest_internal": 29696
+    },
+    "voice": {
+      "phase": 0,
+      "duration_ms": 0,
+      "error": "",
+      "unread": true,
+      "page_index": 0,
+      "page_count": 0,
+      "boot_pressed": false,
+      "boot_presses": 0,
+      "boot_queued": 0,
+      "boot_handled": 0,
+      "start_stage": 0,
+      "hold_id": 0
+    },
+    "display": {
+      "last_active_fps": 20
+    },
+    "link": "wifi",
+    "clock_ready": true
+  },
+  {
+    "elapsed": 41.088,
+    "firmware": "0.11.0-partial-refresh",
+    "memory": {
+      "free_internal": 102819,
+      "min_internal": 55519,
+      "largest_internal": 31744
+    },
+    "voice": {
+      "phase": 0,
+      "duration_ms": 0,
+      "error": "",
+      "unread": true,
+      "page_index": 0,
+      "page_count": 0,
+      "boot_pressed": false,
+      "boot_presses": 0,
+      "boot_queued": 0,
+      "boot_handled": 0,
+      "start_stage": 0,
+      "hold_id": 0
+    },
+    "display": {
+      "last_active_fps": 20
+    },
+    "link": "wifi",
+    "clock_ready": true
+  },
+  {
+    "elapsed": 46.288,
+    "firmware": "0.11.0-partial-refresh",
+    "memory": {
+      "free_internal": 61355,
+      "min_internal": 55519,
+      "largest_internal": 26624
+    },
+    "voice": {
+      "phase": 0,
+      "duration_ms": 0,
+      "error": "",
+      "unread": true,
+      "page_index": 0,
+      "page_count": 0,
+      "boot_pressed": false,
+      "boot_presses": 0,
+      "boot_queued": 0,
+      "boot_handled": 0,
+      "start_stage": 0,
+      "hold_id": 0
+    },
+    "display": {
+      "last_active_fps": 20
+    },
+    "link": "wifi",
+    "clock_ready": true
+  },
+  {
+    "elapsed": 51.54,
+    "firmware": "0.11.0-partial-refresh",
+    "memory": {
+      "free_internal": 99555,
+      "min_internal": 54983,
+      "largest_internal": 31744
+    },
+    "voice": {
+      "phase": 0,
+      "duration_ms": 0,
+      "error": "",
+      "unread": true,
+      "page_index": 0,
+      "page_count": 0,
+      "boot_pressed": false,
+      "boot_presses": 0,
+      "boot_queued": 0,
+      "boot_handled": 0,
+      "start_stage": 0,
+      "hold_id": 0
+    },
+    "display": {
+      "last_active_fps": 20
+    },
+    "link": "wifi",
+    "clock_ready": true
+  }
+]

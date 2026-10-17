@@ -392,3 +392,7 @@ if(CONFIG_ESP_LVGL_ADAPTER_LVGL_THREAD_STACK_IN_PSRAM AND
     esp_lv_adapter_target_compile_definitions(${lvgl_comp_lib} PRIVATE
         "LV_FREERTOS_TASK_STACK_ALLOC_CAPS=(MALLOC_CAP_SPIRAM|MALLOC_CAP_8BIT)")
 endif()
+
+if(MY_BOT_DISPLAY_BENCHMARK)
+    target_compile_definitions(${COMPONENT_LIB} PRIVATE MY_BOT_DISPLAY_BENCHMARK=1)
+endif()

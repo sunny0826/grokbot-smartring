@@ -42,6 +42,7 @@ struct GadgetState {
     int battery_pct;      // -1 when unknown
     bool battery_charging;
     uint32_t uptime_s;
+    uint32_t display_fps;
 };
 
 /* ---- gadget task side ---- */

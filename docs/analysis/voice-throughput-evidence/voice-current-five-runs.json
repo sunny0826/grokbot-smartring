@@ -1,0 +1,136 @@
+{
+  "scope": "Five sequential current-flow checks, not controlled old/new A/B",
+  "median_seconds": 26.94009975,
+  "runs": [
+    {
+      "request_id": "d1134874df56419e83db996cea125e56",
+      "stored_to_replied_seconds": 26.94009975,
+      "accepted_to_claim_seconds": 15.051871709,
+      "claim_to_reply_seconds": 9.935399458,
+      "notification_attempts": [
+        1
+      ],
+      "reply_and_page_verified": true,
+      "mcp_calls": [
+        {
+          "tool": "gadgets_command",
+          "capability": "voice.claim",
+          "duration_ms": 62.7,
+          "status": "executed",
+          "duplicate": false
+        },
+        {
+          "tool": "gadgets_command",
+          "capability": "voice.reply",
+          "duration_ms": 167.8,
+          "status": "executed",
+          "duplicate": false
+        }
+      ]
+    },
+    {
+      "request_id": "450e4754485f44a9b3c9da43a7b821d0",
+      "stored_to_replied_seconds": 23.001083375,
+      "accepted_to_claim_seconds": 12.826648459,
+      "claim_to_reply_seconds": 8.028270125,
+      "notification_attempts": [
+        1
+      ],
+      "reply_and_page_verified": true,
+      "mcp_calls": [
+        {
+          "tool": "gadgets_command",
+          "capability": "voice.claim",
+          "duration_ms": 254.1,
+          "status": "executed",
+          "duplicate": false
+        },
+        {
+          "tool": "gadgets_command",
+          "capability": "voice.reply",
+          "duration_ms": 211.0,
+          "status": "executed",
+          "duplicate": false
+        }
+      ]
+    },
+    {
+      "request_id": "ff8ed37d2c3344c29d8cda9a10aaed63",
+      "stored_to_replied_seconds": 28.293920375,
+      "accepted_to_claim_seconds": 14.319470916,
+      "claim_to_reply_seconds": 11.94531725,
+      "notification_attempts": [
+        1
+      ],
+      "reply_and_page_verified": true,
+      "mcp_calls": [
+        {
+          "tool": "gadgets_command",
+          "capability": "voice.claim",
+          "duration_ms": 145.0,
+          "status": "executed",
+          "duplicate": false
+        },
+        {
+          "tool": "gadgets_command",
+          "capability": "voice.reply",
+          "duration_ms": 168.3,
+          "status": "executed",
+          "duplicate": false
+        }
+      ]
+    },
+    {
+      "request_id": "1fbdcb234bf64ef58e55d2b3987c4f93",
+      "stored_to_replied_seconds": 29.783784208,
+      "accepted_to_claim_seconds": 14.202081167,
+      "claim_to_reply_seconds": 13.547541708,
+      "notification_attempts": [
+        1
+      ],
+      "reply_and_page_verified": true,
+      "mcp_calls": [
+        {
+          "tool": "gadgets_command",
+          "capability": "voice.claim",
+          "duration_ms": 84.6,
+          "status": "executed",
+          "duplicate": false
+        },
+        {
+          "tool": "gadgets_command",
+          "capability": "voice.reply",
+          "duration_ms": 189.8,
+          "status": "executed",
+          "duplicate": false
+        }
+      ]
+    },
+    {
+      "request_id": "94ff828d12674748ae8823e520a6a734",
+      "stored_to_replied_seconds": 24.91396525,
+      "accepted_to_claim_seconds": 11.911255125,
+      "claim_to_reply_seconds": 10.574291459,
+      "notification_attempts": [
+        1
+      ],
+      "reply_and_page_verified": true,
+      "mcp_calls": [
+        {
+          "tool": "gadgets_command",
+          "capability": "voice.claim",
+          "duration_ms": 106.5,
+          "status": "executed",
+          "duplicate": false
+        },
+        {
+          "tool": "gadgets_command",
+          "capability": "voice.reply",
+          "duration_ms": 187.6,
+          "status": "executed",
+          "duplicate": false
+        }
+      ]
+    }
+  ]
+}

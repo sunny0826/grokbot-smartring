@@ -36,7 +36,7 @@
 #include "freertos/queue.h"
 #include "freertos/task.h"
 
-#define FIRMWARE_VERSION "0.9.1-tap-controls"
+#define FIRMWARE_VERSION "0.13.0-async-read"
 
 static constexpr int RX_BUF = 4608;   // console lines may reach 4096; gateway frames 2048
 static constexpr int TX_BUF = 2208;
@@ -294,7 +294,7 @@ static bool send_event(const GadgetEvent &e, char *buf, size_t cap)
 
 static void console_reply(bool ok, const char *code, const char *message, bool include_wifi = false)
 {
-    char buf[1024];
+    static char buf[2048];
     cJSON *root = cJSON_CreateObject();
     cJSON_AddBoolToObject(root, "ok", ok);
     cJSON_AddStringToObject(root, "device_id", s_device_id);
@@ -340,6 +340,11 @@ static void console_reply(bool ok, const char *code, const char *message, bool i
         cJSON_AddNumberToObject(v, "boot_handled", diagnostic.handled);
         cJSON_AddNumberToObject(v, "start_stage", diagnostic.start_stage);
         cJSON_AddNumberToObject(v, "hold_id", voice.hold_id);
+        xSemaphoreTake(s_state_mu, portMAX_DELAY);
+        const auto display_fps = s_state.display_fps;
+        xSemaphoreGive(s_state_mu);
+        cJSON *display = cJSON_AddObjectToObject(root, "display");
+        cJSON_AddNumberToObject(display, "last_active_fps", display_fps);
     }
     if (!ok) {
         cJSON *err = cJSON_AddObjectToObject(root, "error");

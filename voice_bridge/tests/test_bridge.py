@@ -41,13 +41,27 @@ def test_tls_durable_upload_idempotency_and_conflict(receiver, storage):
 
 
 def test_auth_revocation_and_limits_before_body(receiver):
-    assert request(receiver, headers={"Authorization": "Bearer wrong"})[0] == 401
-    assert request(receiver, headers={"Content-Length": str(MAX_AUDIO + 1)})[0] == 413
+    server, context, _ = receiver
+    def headers_only(overrides):
+        connection = http.client.HTTPSConnection("localhost", server.server_port, context=context, timeout=3)
+        fields = {"X-Device-ID": DEVICE, "Authorization": "Bearer " + TOKEN,
+                  "Content-Type": "audio/wav", "Content-Length": str(len(wav()))}
+        fields.update(overrides)
+        connection.putrequest("PUT", "/v1/recordings/" + RID)
+        for name, value in fields.items():
+            connection.putheader(name, value)
+        connection.endheaders()
+        response = connection.getresponse()
+        response.read()
+        connection.close()
+        return response.status
+    assert headers_only({"Authorization": "Bearer wrong"}) == 401
+    assert headers_only({"Content-Length": str(MAX_AUDIO + 1)}) == 413
     assert request(receiver, body=b"notwav")[0] == 422
-    assert request(receiver, headers={"Content-Type": "application/octet-stream"})[0] == 415
+    assert headers_only({"Content-Type": "application/octet-stream"}) == 415
     assert request(receiver, request_id="../bad")[0] == 404
     private_write(receiver[2], {"devices": {DEVICE: {"token": TOKEN, "revoked": True}}})
-    assert request(receiver)[0] == 401
+    assert headers_only({}) == 401
 
 
 def test_unauthorized_does_not_wait_for_body(receiver):

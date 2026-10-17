@@ -25,10 +25,12 @@ static inline float shapeCov(float c)
 
 void fb_clear(Fb &fb, uint16_t color)
 {
+    fb_track(fb, 0, 0, fb.w - 1, fb.h - 1);
     uint32_t pat = ((uint32_t)color << 16) | color;
     uint32_t *p = (uint32_t *)fb.px;
     size_t n = (size_t)fb.w * fb.h / 2;
     for (size_t i = 0; i < n; i++) p[i] = pat;
+    if ((fb.w * fb.h) & 1) fb.px[fb.w * fb.h - 1] = color;
 }
 
 void fb_clear_rect(Fb &fb, int x0, int y0, int x1, int y1, uint16_t color)
@@ -38,6 +40,7 @@ void fb_clear_rect(Fb &fb, int x0, int y0, int x1, int y1, uint16_t color)
     if (x1 > fb.w - 1) x1 = fb.w - 1;
     if (y1 > fb.h - 1) y1 = fb.h - 1;
     if (x0 > x1 || y0 > y1) return;
+    fb_track(fb, x0, y0, x1, y1);
     uint32_t pat = ((uint32_t)color << 16) | color;
     for (int y = y0; y <= y1; y++) {
         uint16_t *row = fb.px + (size_t)y * fb.w;
@@ -55,6 +58,7 @@ void fb_clear_rect(Fb &fb, int x0, int y0, int x1, int y1, uint16_t color)
 void fb_blend_px(Fb &fb, int x, int y, uint16_t c, float a)
 {
     if (x < 0 || y < 0 || x >= fb.w || y >= fb.h || a <= 0.f) return;
+    fb_track(fb, x, y, x, y);
     uint16_t &dst = fb.px[y * fb.w + x];
     dst = blend565(dst, c, a > 1.f ? 1.f : a);
 }
@@ -124,6 +128,7 @@ void fb_fill_poly(Fb &fb, const float *xs, const float *ys, int n, uint16_t colo
                 int x0 = (int)floorf(xa + 0.5f) - 1, x1 = (int)ceilf(xb - 0.5f) + 1;
                 if (x0 < 0) x0 = 0;
                 if (x1 > fb.w - 1) x1 = fb.w - 1;
+                fb_track(fb, x0, y, x1, y);
                 for (int x = x0; x <= x1; x++) {
                     float lo = xa > x - 0.5f ? xa : x - 0.5f;
                     float hi = xb < x + 0.5f ? xb : x + 0.5f;
@@ -157,6 +162,7 @@ void fb_fill_ellipse(Fb &fb, float cx, float cy, float rot, float rx, float ry, 
     if (y0 < 0) y0 = 0;
     if (x1 > fb.w - 1) x1 = fb.w - 1;
     if (y1 > fb.h - 1) y1 = fb.h - 1;
+    fb_track(fb, x0, y0, x1, y1);
 
     // Squared distance instead of sqrtf: newlib's sqrtf is soft-float (~100 cycles), banned in hot paths
     // Soft-edge approximation: d²-1 ≈ 2(d-1) (near d≈1); pxPerUnit scales normalized distance -> pixels
@@ -197,6 +203,7 @@ void fb_draw_ellipse_over(Fb &fb, float cx, float cy, float rot, float rx, float
     if (y0 < 0) y0 = 0;
     if (x1 > fb.w - 1) x1 = fb.w - 1;
     if (y1 > fb.h - 1) y1 = fb.h - 1;
+    fb_track(fb, x0, y0, x1, y1);
 
     // 2 px anti-alias band (the original 1 px band crawled during motion):
     // coverage = clamp(0.5 - pixelDist/2), then smoothstep to soften both ends
@@ -238,6 +245,7 @@ void fb_fill_capsule(Fb &fb, float cx, float cy, float a, float b, float c, floa
     if (y0 < 0) y0 = 0;
     if (x1 > fb.w - 1) x1 = fb.w - 1;
     if (y1 > fb.h - 1) y1 = fb.h - 1;
+    fb_track(fb, x0, y0, x1, y1);
 
     float r = hw < hh ? hw : hh;
     float segX = hw > r ? hw - r : 0.f;

@@ -1,0 +1,5 @@
+Remote endpoint, WS binary boundaries, partial payloads/writes, fragmentation, ping/pong, bounds and cleanup PASS
+Inbox 0/1/16 exclusions, 527-byte complete header, 17/invalid rejection, scope same snapshot, header failures and unchanged routes PASS
+Shared clock gate, bounded SNTP, warm LAN fallback, public HTTPS443 trust/timeout, redirect and HTML rejection PASS
+Scope v1 known SHA256 vector, snapshot/no reload, identity isolation, route independence and invalid inputs PASS (host crypto adapter)
+Network blob migration, rollback fault injection, boundary lengths and endpoint preservation PASS

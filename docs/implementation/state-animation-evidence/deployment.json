@@ -1,0 +1,27 @@
+{
+  "recorded_at": "2026-10-17T08:56:16.448666+00:00",
+  "firmware": "0.12.1-state-animations",
+  "benchmark": false,
+  "app_bytes": 1853168,
+  "flash_hash_verified": true,
+  "observation_seconds": 55,
+  "status_samples": 11,
+  "wifi_reconnected": true,
+  "observed_display_errors": 0,
+  "physical_voice_flow_verified": false,
+  "sha256": {
+    "firmware/grokbot/main/bot_states.cpp": "a0c92ab9f28d0a7d9c1dbe7a0802bbbac5394ee43a44a539d0a2e018457a7ca4",
+    "firmware/grokbot/main/bot_states.h": "081d338b93e02782abf051e53c2e5f10ea6190bc0540740919828e74d27f81b4",
+    "firmware/grokbot/main/voice_character.cpp": "dcdecee18412a188a0ab5ec323e0647b308fb1e123ef0bc36a72e7fdffe6861a",
+    "firmware/grokbot/main/voice_character.h": "584c762418e0edadf3634cd6078603783894648ef9005bfd37fdabfbee832579",
+    "firmware/grokbot/main/voice_ui.cpp": "dcbeefdee399dcf06c6fc9f07e87a9d421306754d1d023cebb760016537634c1",
+    "firmware/grokbot/main/character_presenter.cpp": "c1504192ae03100408fb2a3ae8732710a9ddec9b87500f5e310f49bf79776165",
+    "firmware/grokbot/main/character_presenter.h": "b7cdf858223857937356741c7f3ccc3131fa95bd4b6f943626a02ce696cd84f9",
+    "firmware/grokbot/main/main.cpp": "748d7f543d0d9b98141c93f42b524d35651367415f583ce35e4fdcfabf60e9c3",
+    "firmware/grokbot/main/gadget.cpp": "1419f254b4f9f434a4ee863b3533b0ed51ef5a85879c2ab4f337f6bb37b04194",
+    "firmware/grokbot/tests/voice_character_test.cpp": "f2011e8fc48abe7732a99b19cf5a9165bdaf463a48cee812c82a073202bcfd86",
+    "firmware/grokbot/tools/voice_ui_smoke/smoke.cpp": "65fe882b4244ce401765c6be82a3700a8b568ddd4a92c1eb4f566f623c6b0e30",
+    "firmware/grokbot/tools/preview_voice_fusion.py": "982bd361b4396ac68414e72107f53a4990e4902521c714acfbe7df1cea1c8e91",
+    "firmware/grokbot/build/grokbot.bin": "4e623b2781788da6019dc828a7a5128f50040c1c7861a0a5b1ad79190882a2ab"
+  }
+}

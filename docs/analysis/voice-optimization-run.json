@@ -1,0 +1,88 @@
+[
+  {
+    "request_id": "343d2810537546f6aea368af1acd412c",
+    "status": "replied",
+    "audio_seconds": 5.455333333333333,
+    "events": [
+      {
+        "stage": "upload_received",
+        "boot_id": "de4adf8541e74b5f8b7e8873abb9bb86",
+        "at": "2026-10-17T07:23:03.860955+00:00",
+        "duration_ms": 0.384375,
+        "attempt": 0
+      },
+      {
+        "stage": "stored",
+        "boot_id": "de4adf8541e74b5f8b7e8873abb9bb86",
+        "at": "2026-10-17T07:23:03.861034+00:00",
+        "duration_ms": null,
+        "attempt": 0,
+        "since_previous_ms": 0.079
+      },
+      {
+        "stage": "transcribing",
+        "boot_id": "de4adf8541e74b5f8b7e8873abb9bb86",
+        "at": "2026-10-17T07:23:04.000682+00:00",
+        "duration_ms": null,
+        "attempt": 0,
+        "since_previous_ms": 139.648
+      },
+      {
+        "stage": "ready",
+        "boot_id": "de4adf8541e74b5f8b7e8873abb9bb86",
+        "at": "2026-10-17T07:23:04.809527+00:00",
+        "duration_ms": null,
+        "attempt": 0,
+        "since_previous_ms": 808.844
+      },
+      {
+        "stage": "notify_sending",
+        "boot_id": "de4adf8541e74b5f8b7e8873abb9bb86",
+        "at": "2026-10-17T07:23:04.845442+00:00",
+        "duration_ms": null,
+        "attempt": 1,
+        "since_previous_ms": 35.915
+      },
+      {
+        "stage": "notify_accepted",
+        "boot_id": "de4adf8541e74b5f8b7e8873abb9bb86",
+        "at": "2026-10-17T07:23:05.868440+00:00",
+        "duration_ms": null,
+        "attempt": 1,
+        "since_previous_ms": 1022.998
+      },
+      {
+        "stage": "claimed",
+        "boot_id": "de4adf8541e74b5f8b7e8873abb9bb86",
+        "at": "2026-10-17T07:23:24.041246+00:00",
+        "duration_ms": null,
+        "attempt": 0,
+        "since_previous_ms": 18172.781
+      },
+      {
+        "stage": "reply_received",
+        "boot_id": "de4adf8541e74b5f8b7e8873abb9bb86",
+        "at": "2026-10-17T07:23:34.759439+00:00",
+        "duration_ms": null,
+        "attempt": 0,
+        "since_previous_ms": 10718.179
+      },
+      {
+        "stage": "rendered",
+        "boot_id": "de4adf8541e74b5f8b7e8873abb9bb86",
+        "at": "2026-10-17T07:23:34.792967+00:00",
+        "duration_ms": 33.129541,
+        "attempt": 0,
+        "since_previous_ms": 33.528
+      },
+      {
+        "stage": "replied",
+        "boot_id": "de4adf8541e74b5f8b7e8873abb9bb86",
+        "at": "2026-10-17T07:23:34.793519+00:00",
+        "duration_ms": null,
+        "attempt": 0,
+        "since_previous_ms": 0.552
+      }
+    ]
+  }
+]

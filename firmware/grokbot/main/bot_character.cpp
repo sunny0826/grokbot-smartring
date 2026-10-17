@@ -161,20 +161,18 @@ static void grokbot_draw(CharacterDrawParams &p)
 struct CharacterDef {
     const char *name;
     void (*draw)(CharacterDrawParams &);
-    bool fullClear;  // draws outside the body bbox -> no dirty-rect fast path
 };
 
 static const CharacterDef CHARACTERS[] = {
-    { "grokbot", grokbot_draw, false },
-    { "pika",    pika_draw,    true  },  // cheeks ride the gaze sphere past the bbox
-    { "rowlet",  rowlet_draw,  true  },  // feet stick out past the body bbox
+    { "grokbot", grokbot_draw },
+    { "pika",    pika_draw },
+    { "rowlet",  rowlet_draw },
 };
 static int s_charIdx = 0;
 
 int character_count() { return (int)(sizeof(CHARACTERS) / sizeof(CHARACTERS[0])); }
 int character_index() { return s_charIdx; }
 const char *character_name(int i) { return CHARACTERS[i].name; }
-bool character_full_clear() { return CHARACTERS[s_charIdx].fullClear; }
 
 void character_select(int i)
 {
@@ -185,4 +183,18 @@ void character_select(int i)
 void character_draw(CharacterDrawParams &p)
 {
     CHARACTERS[s_charIdx].draw(p);
+}
+
+PixelRect CharacterRenderer::render(CharacterDrawParams params)
+{
+    params.fb.writes = nullptr;
+    PixelRect dirty = initialized_ ? previous_ : PixelRect{0, 0, params.fb.w - 1, params.fb.h - 1};
+    if (!dirty.empty()) fb_clear_rect(params.fb, dirty.x1, dirty.y1, dirty.x2, dirty.y2, params.paper);
+    PixelRect current;
+    params.fb.writes = &current;
+    character_draw(params);
+    dirty.include(current);
+    previous_ = current;
+    initialized_ = true;
+    return dirty;
 }

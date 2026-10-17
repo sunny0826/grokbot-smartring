@@ -43,14 +43,18 @@ int character_count();
 int character_index();
 const char *character_name(int i);
 void character_select(int i);  // wraps around
-// True if the current skin draws outside the body-ellipse bbox (e.g. ears) and
-// therefore needs a full clear every frame instead of the dirty-rect fast path.
-bool character_full_clear();
 
-// Paint one frame of the current character. The implementation must write every
-// pixel inside the body ellipse bbox unless character_full_clear() is true for it
-// (main.cpp's dirty-rect fast path relies on it). Non-const: drawing mutates the fb.
+// Raw painting for full-frame previews; live UI uses CharacterRenderer.
 void character_draw(CharacterDrawParams &p);
+
+class CharacterRenderer {
+public:
+    PixelRect render(CharacterDrawParams params);
+    void reset() { initialized_ = false; }
+private:
+    PixelRect previous_;
+    bool initialized_ = false;
+};
 
 /* ---------------- shared building blocks for skins ----------------
  * Implemented in bot_character.cpp; usable from any skin file. All of them

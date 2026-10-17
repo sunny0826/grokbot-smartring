@@ -1,0 +1,51 @@
+{
+  "checks": [
+    {
+      "route": "lan",
+      "excluded": 0,
+      "matches_authoritative_db": true,
+      "header_bytes": 0
+    },
+    {
+      "route": "lan",
+      "excluded": 1,
+      "matches_authoritative_db": true,
+      "header_bytes": 32
+    },
+    {
+      "route": "lan",
+      "excluded": 16,
+      "matches_authoritative_db": true,
+      "header_bytes": 527
+    },
+    {
+      "route": "public",
+      "excluded": 0,
+      "matches_authoritative_db": true,
+      "header_bytes": 0
+    },
+    {
+      "route": "public",
+      "excluded": 1,
+      "matches_authoritative_db": true,
+      "header_bytes": 32
+    },
+    {
+      "route": "public",
+      "excluded": 16,
+      "matches_authoritative_db": true,
+      "header_bytes": 527
+    },
+    {
+      "route": "lan",
+      "invalid_header_rejected": true
+    },
+    {
+      "route": "public",
+      "invalid_header_rejected": true
+    }
+  ],
+  "read_flags_unchanged": true,
+  "existing_unread_count": 0,
+  "new_messages_created": 0
+}

@@ -1,0 +1,80 @@
+[
+  {
+    "sample": "synthetic",
+    "audio_seconds": 5.4553,
+    "notify_reserved_utc": "2026-10-17T04:49:38.636102+00:00",
+    "events": [
+      {
+        "ts": "2026-10-17T04:49:49.678093+00:00",
+        "tool": "gadgets_list_devices",
+        "duration_ms": 1.8,
+        "outcome": "ok",
+        "elapsed_since_notify_s": 11.042
+      },
+      {
+        "ts": "2026-10-17T04:49:50.312563+00:00",
+        "tool": "gadgets_get_state",
+        "duration_ms": 0.7,
+        "outcome": "ok",
+        "elapsed_since_notify_s": 11.6765
+      },
+      {
+        "ts": "2026-10-17T04:50:00.658225+00:00",
+        "tool": "gadgets_command",
+        "capability": "voice.claim",
+        "duration_ms": 148.3,
+        "status": "executed",
+        "outcome": "ok",
+        "elapsed_since_notify_s": 22.0221
+      },
+      {
+        "ts": "2026-10-17T04:50:18.972451+00:00",
+        "tool": "gadgets_command",
+        "capability": "voice.reply",
+        "duration_ms": 379.4,
+        "status": "executed",
+        "outcome": "ok",
+        "elapsed_since_notify_s": 40.3363
+      }
+    ]
+  },
+  {
+    "sample": "device",
+    "audio_seconds": 5.56,
+    "notify_reserved_utc": "2026-10-17T04:56:22.502777+00:00",
+    "events": [
+      {
+        "ts": "2026-10-17T04:56:32.379922+00:00",
+        "tool": "gadgets_list_devices",
+        "duration_ms": 0.7,
+        "outcome": "ok",
+        "elapsed_since_notify_s": 9.8771
+      },
+      {
+        "ts": "2026-10-17T04:56:32.910361+00:00",
+        "tool": "gadgets_get_state",
+        "duration_ms": 0.4,
+        "outcome": "ok",
+        "elapsed_since_notify_s": 10.4076
+      },
+      {
+        "ts": "2026-10-17T04:56:40.653985+00:00",
+        "tool": "gadgets_command",
+        "capability": "voice.claim",
+        "duration_ms": 85.2,
+        "status": "executed",
+        "outcome": "ok",
+        "elapsed_since_notify_s": 18.1512
+      },
+      {
+        "ts": "2026-10-17T04:56:52.882877+00:00",
+        "tool": "gadgets_command",
+        "capability": "voice.reply",
+        "duration_ms": 315.9,
+        "status": "executed",
+        "outcome": "ok",
+        "elapsed_since_notify_s": 30.3801
+      }
+    ]
+  }
+]

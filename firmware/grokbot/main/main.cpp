@@ -13,10 +13,12 @@
 #include "lvgl.h"
 
 #include "bot_math.h"
+#include "bot_motion.h"
 #include "bot_face.h"
 #include "bot_render.h"
 #include "bot_states.h"
 #include "bot_character.h"
+#include "character_presenter.h"
 #include "gadget.h"
 #include "status_bar.h"
 #include "home_controls.h"
@@ -30,10 +32,6 @@ static const char *TAG = "grokbot";
 
 #define CANVAS 320                    // canvas side length (360 round panel with margin)
 static constexpr float SCALE = 100.f; // ball radius (pixels)
-static constexpr float PMAX = 0.52f;  // max body offset (in ball radii): (160-8-100)/100
-static constexpr float ACC = 2.4f;    // gravity gain: r/s^2 per (m/s^2)
-static constexpr float DAMP = 0.9f;   // velocity damping (1/s)
-static constexpr float RESTIT = 0.42f;  // edge restitution
 static const uint16_t PAPER = rgb565(0xec, 0xe7, 0xdb);  // cream paper color
 static const uint16_t INK = rgb565(0x0a, 0x0a, 0x0c);    // bot ink black (measured from bloub)
 
@@ -46,17 +44,15 @@ static const char *const ANIM_NAMES[] = {
 
 static Fb s_fb;
 static lv_obj_t *s_canvas;
+static CharacterPresenter s_presenter;
+static bool s_home_suspended;
 
 static float s_t = 0.f;              // animation clock (seconds)
-static float s_px = 0, s_py = 0;     // body offset (in ball radii)
-static float s_vx = 0, s_vy = 0;     // velocity
-static float s_squash = 0;           // jelly squash amount 0..1
-static float s_squash_dir = 0;       // squash direction (radians)
+static BodyMotion s_body;
 static float s_yaw = 0, s_pitch = 0, s_roll = 0;  // smoothed gaze
 static float s_mix = 0;              // how much gravity controls the gaze
 static float s_poke_at = -10.f;      // time of last poke
 static bool s_imu_ok = false;
-static bool s_force_clear = false;   // full clear on next gravity frame (set on skin switch)
 static float s_ux = 0.f, s_uy = -1.f;  // smoothed world-up direction (screen coords)
 
 /* ---- Touch: tap/hold = poke, horizontal swipe = switch character skin ---- */
@@ -108,20 +104,17 @@ static void trigger_dizzy()
 
 static void frame_cb(lv_timer_t *)
 {
-    /* Measured dt: TE sync gates the frame rate to the panel rate (may drift 40~62fps);
-     * a fixed dt would distort speed when the rate fluctuates; the clamp prevents huge
-     * physics steps after a stall. */
     static int64_t s_last_us = 0;
     int64_t nowUs = esp_timer_get_time();
-    float dt = s_last_us ? (float)(nowUs - s_last_us) * 1e-6f : 1.f / 60.f;
+    float dt = s_last_us ? (float)(nowUs - s_last_us) * 1e-6f : LV_DEF_REFR_PERIOD / 1000.f;
     s_last_us = nowUs;
-    if (dt > 0.05f) dt = 0.05f;
-    if (dt < 0.004f) dt = 0.004f;
+    if (dt < 0.001f) dt = 0.001f;
     s_t += dt;
 
     /* ---- Gadget commands from Grok Bot: executed in LVGL context before physics ---- */
     gadget_drain();
-    if (voice_ui_active() || wifi_setup_ui_active()) {
+    if (s_presenter.update(lv_tick_get()) != CharacterMode::Home) {
+        s_home_suspended = true;
         gadget_publish();
         return;
     }
@@ -130,6 +123,10 @@ static void frame_cb(lv_timer_t *)
     float gx = 0, gy = 0;
     if (s_imu_ok) bsp_imu_get_tilt(&gx, &gy);
     float gm = hypotf(gx, gy);
+    if (s_home_suspended) {
+        s_pgx = gx; s_pgy = gy; s_jerk = 0;
+        s_home_suspended = false;
+    }
 
     /* ---- Shake detection: jerk on the (EMA-filtered) tilt vector. The BSP filter
      * smooths slow motion, so only a real shake pushes the jerk over the threshold. */
@@ -143,50 +140,7 @@ static void frame_cb(lv_timer_t *)
         ESP_LOGI(TAG, "shake! dizzy (jerk %.1f)", s_jerk);
     }
 
-    /* ---- Physics: spring-damped rolling + circular boundary bounce; carousel pulls back to center ---- */
-    if (s_carousel) {
-        // Center the body during carousel: otherwise the ball rests at the edge when laid flat
-        // and poses would play off-center.
-        float ck = 1.f - expf(-dt / 0.3f);
-        s_px -= s_px * ck;
-        s_py -= s_py * ck;
-        s_vx = s_vy = 0;
-    } else {
-        s_vx += gx * ACC * dt;
-        s_vy += gy * ACC * dt;
-    }
-    float damp = expf(-DAMP * dt);
-    s_vx *= damp;
-    s_vy *= damp;
-    s_px += s_vx * dt;
-    s_py += s_vy * dt;
-
-    float pm = hypotf(s_px, s_py);
-    if (pm > PMAX) {
-        float nx = s_px / pm, ny = s_py / pm;
-        s_px = nx * PMAX;
-        s_py = ny * PMAX;
-        float vn = s_vx * nx + s_vy * ny;
-        if (vn > 0.f) {
-            s_vx -= (1.f + RESTIT) * vn * nx;
-            s_vy -= (1.f + RESTIT) * vn * ny;
-            float impact = clampf(vn * 0.3f);
-            if (impact > s_squash) {
-                s_squash = impact;
-                s_squash_dir = atan2f(ny, nx);
-            }
-        }
-    }
-    // Continuous jelly while moving: slight stretch along the velocity direction
-    float speed = hypotf(s_vx, s_vy);
-    if (speed > 0.8f) {
-        float motion = clampf((speed - 0.8f) * 0.08f, 0.f, 0.5f);
-        if (motion > s_squash) {
-            s_squash = motion;
-            s_squash_dir = atan2f(s_vy, s_vx);
-        }
-    }
-    s_squash *= expf(-5.f * dt);
+    s_body.advance(dt, gx, gy, s_carousel);
 
     /* ---- Gaze: gravity direction = absolute gaze target (bloub setLook semantics) */
     float mixTarget = clampf((gm - 0.8f) / 2.2f);  // let the eyes wander freely near flat
@@ -296,19 +250,11 @@ static void frame_cb(lv_timer_t *)
     lid = fminf(lid, 1.f - s_pose.eyeClose);
     gaze = { s_pose.gaze.yaw, s_pose.gaze.pitch, s_pose.gaze.roll };
 
-    /* ---- Render. Gravity mode takes the dirty-rect fast path; the carousel has sparse
-     * decorations (ring/dots/badge) that do not fill the bounding box, so the fast-path
-     * assumption "the draw pass fills every pixel in the box" breaks — clear and redraw fully. */
-    int64_t r0 = esp_timer_get_time();
-
-    bool decor = s_carousel || s_pose.ringA > 0.001f || s_pose.dotA[0] > 0.001f ||
-                 s_pose.dotA[1] > 0.001f || s_pose.notifA > 0.001f || character_full_clear();
-
     float cx0 = CANVAS / 2.f, cy0 = CANVAS / 2.f;
-    float ox = s_px + lv.driftX, oy = s_py + lv.driftY;
+    float ox = s_body.x + lv.driftX, oy = s_body.y + lv.driftY;
     // Squash = impact/velocity squash + pose-driven squash (happy landings; vertical)
-    float squashAll = s_squash + s_pose.squashAdd;
-    float squashDir = s_squash > 0.03f ? s_squash_dir : 1.5707963f;
+    float squashAll = s_body.squash + s_pose.squashAdd;
+    float squashDir = s_body.squash > 0.03f ? s_body.squash_direction : 1.5707963f;
     // Squash along the impact/velocity direction: short axis along impact, long axis perpendicular
     float sq = 1.f - 0.22f * squashAll, st = (1.f + 0.16f * squashAll) * lv.breath;
     // Pose body offset/radius stack on top of the gravity offset (~0 during carousel)
@@ -323,42 +269,6 @@ static void frame_cb(lv_timer_t *)
     float m11 = st * cr * cr + sq * sr * sr;
     float m12 = cr * sr * (st - sq);
     float m22 = st * sr * sr + sq * cr * cr;
-
-    // Bounding box (rotated-ellipse AABB + 3px margin, larger than the 2.5px soft-edge pad inside the draw calls)
-    float bc = cosf(erot), bs = sinf(erot);
-    float bex = sqrtf(erx * erx * bc * bc + ery * ery * bs * bs);
-    float bey = sqrtf(erx * erx * bs * bs + ery * ery * bc * bc);
-    lv_area_t cur = {
-        (lv_coord_t)(floorf(rcx - bex) - 3), (lv_coord_t)(floorf(rcy - bey) - 3),
-        (lv_coord_t)(ceilf(rcx + bex) + 3),  (lv_coord_t)(ceilf(rcy + bey) + 3)
-    };
-    if (cur.x1 < 0) cur.x1 = 0;
-    if (cur.y1 < 0) cur.y1 = 0;
-    if (cur.x2 > CANVAS - 1) cur.x2 = CANVAS - 1;
-    if (cur.y2 > CANVAS - 1) cur.y2 = CANVAS - 1;
-
-    static lv_area_t s_prev = { 0, 0, 0, 0 };
-    static bool s_first = true;
-    if (decor) {
-        fb_clear(s_fb, PAPER);   // carousel: full redraw
-        s_first = true;          // force one full clear when returning to gravity mode
-    } else {
-        bool sameBox = !s_first && s_prev.x1 == cur.x1 && s_prev.y1 == cur.y1 &&
-                       s_prev.x2 == cur.x2 && s_prev.y2 == cur.y2;
-        if (s_first || s_force_clear) {
-            s_first = false;
-            s_force_clear = false;
-            fb_clear_rect(s_fb, 0, 0, CANVAS - 1, CANVAS - 1, PAPER);
-        } else if (!sameBox) {
-            // Position changed: clear the old spot (the new box is fully written by the draw pass,
-            // no need to clear the union)
-            fb_clear_rect(s_fb, s_prev.x1, s_prev.y1, s_prev.x2, s_prev.y2, PAPER);
-        }
-        // sameBox: box unchanged and the draw pass writes every pixel in it — no clear needed
-        s_prev = cur;
-    }
-
-    int64_t tClear = esp_timer_get_time();
 
     // The character itself lives in bot_character.cpp (the "skin"); everything it
     // needs is resolved here into plain numbers.
@@ -375,42 +285,7 @@ static void frame_cb(lv_timer_t *)
         INK, PAPER,
         upCos, upSin,
     };
-    character_draw(cp);
-    int64_t tPoly = esp_timer_get_time();
-
-    // Flush the whole canvas so pixels cleared at the character's old position reach the panel.
-    lv_obj_invalidate(s_canvas);
-    s_prev = cur;
-
-    // Render timing stats: report average/peak every 5 seconds
-    int64_t rUs = esp_timer_get_time() - r0;
-    static int64_t acc = 0, peak = 0, accPoly = 0, accClear = 0, lastTick = 0, gapPeak = 0;
-    static int cnt = 0;
-    acc += rUs;
-    accPoly += tPoly - tClear;
-    accClear += tClear - r0;
-    if (lastTick && r0 - lastTick > gapPeak) gapPeak = r0 - lastTick;
-    lastTick = r0;
-    if (rUs > peak) peak = rUs;
-    cnt++;
-    if (cnt >= 300) {  // 60fps x 5s
-        ESP_LOGI(TAG, "raster avg=%lldus(clear %lld + poly %lld + rest) peak=%lldus | frame gap peak=%lldus | box=%dx%d",
-                 acc / cnt, accClear / cnt, accPoly / cnt, peak, gapPeak,
-                 cur.x2 - cur.x1 + 1, cur.y2 - cur.y1 + 1);
-        acc = 0;
-        accPoly = 0;
-        accClear = 0;
-        peak = 0;
-        gapPeak = 0;
-        cnt = 0;
-    }
-
-    static int logDiv = 0;
-    if (++logDiv >= 60) {
-        logDiv = 0;
-        ESP_LOGI(TAG, "tilt gx=%.2f gy=%.2f | pos %.2f,%.2f | mix %.2f | jerk %.1f", gx, gy, s_px,
-                 s_py, s_mix, s_jerk);
-    }
+    s_presenter.draw_home(cp);
 
     gadget_publish();
 }
@@ -428,8 +303,8 @@ static void do_poke(bool remote = false)
     float gm = hypotf(gx, gy);
     float kx = gm > 0.5f ? -gx / gm : 0.6f;
     float ky = gm > 0.5f ? -gy / gm : -0.8f;
-    s_vx += kx * 3.2f;
-    s_vy += ky * 3.2f;
+    s_body.vx += kx * 3.2f;
+    s_body.vy += ky * 3.2f;
 }
 
 /* ---- Touch handler: tap or stationary hold = poke; horizontal swipe = next/prev skin.
@@ -464,7 +339,7 @@ static void touch_cb(lv_event_t *e)
         s_tactive = false;
         if (s_tswiped && fabsf(dx) > 60.f && fabsf(dx) > fabsf(dy) * 1.2f) {
             character_select(character_index() + (dx > 0 ? 1 : -1));
-            s_force_clear = true;  // the new skin may not fill the old one's pixels
+            s_presenter.reset();
             gadget_emit_switched(character_name(character_index()));
             ESP_LOGI(TAG, "character -> %s (%d/%d)", character_name(character_index()),
                      character_index() + 1, character_count());
@@ -484,7 +359,7 @@ static bool set_character(const char *name, const char **err)
         if (!strcmp(name, character_name(i))) {
             if (i != character_index()) {
                 character_select(i);
-                s_force_clear = true;
+                s_presenter.reset();
                 gadget_emit_switched(name);
             }
             return true;
@@ -561,6 +436,9 @@ static void gadget_publish()
     gs.battery_pct = s_bat_ok ? bsp_battery_get_percent() : -1;
     gs.battery_charging = s_bat_ok && bsp_battery_is_charging();
     gs.uptime_s = (uint32_t)(esp_timer_get_time() / 1000000);
+#if CONFIG_ESP_LVGL_ADAPTER_ENABLE_FPS_STATS
+    esp_lv_adapter_get_fps(nullptr, &gs.display_fps);
+#endif
     gadget_publish_state(gs);
 }
 
@@ -582,8 +460,12 @@ extern "C" void app_main(void)
         return;
     }
     s_fb = { buf, CANVAS, CANVAS };
+    fb_clear(s_fb, PAPER);
 
     esp_lv_adapter_lock(-1);
+#if CONFIG_ESP_LVGL_ADAPTER_ENABLE_FPS_STATS
+    ESP_ERROR_CHECK(esp_lv_adapter_fps_stats_enable(nullptr, true));
+#endif
     lv_obj_t *scr = lv_screen_active();
     lv_obj_set_style_bg_color(scr, lv_color_hex(0xece7db), 0);
     lv_obj_set_style_bg_opa(scr, LV_OPA_COVER, 0);
@@ -591,6 +473,7 @@ extern "C" void app_main(void)
     s_canvas = lv_canvas_create(scr);
     lv_canvas_set_buffer(s_canvas, buf, CANVAS, CANVAS, LV_COLOR_FORMAT_RGB565);
     lv_obj_center(s_canvas);
+    s_presenter.attach(s_canvas, s_fb);
     lv_obj_add_event_cb(s_canvas, touch_cb, LV_EVENT_PRESSED, NULL);
     lv_obj_add_event_cb(s_canvas, touch_cb, LV_EVENT_PRESSING, NULL);
     lv_obj_add_event_cb(s_canvas, touch_cb, LV_EVENT_RELEASED, NULL);
@@ -604,7 +487,7 @@ extern "C" void app_main(void)
     status_bar_create(scr, s_bat_ok);
     voice_ui_create(scr);
     wifi_setup_ui_create();
-    lv_timer_create(frame_cb, 16, NULL);  // ~60 fps, matching the TE-gated panel refresh rate
+    lv_timer_create(frame_cb, LV_DEF_REFR_PERIOD, NULL);
     esp_lv_adapter_unlock();
 
     gadget_start();  // USB protocol task; console is disabled, the port is JSON only

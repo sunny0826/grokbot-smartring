@@ -1,0 +1,11 @@
+PASS empty/no-op and explicit binary encoding
+PASS atomic read, exact confirmation and scope isolation
+PASS 16/17 capacity and restart
+PASS invalid IDs rejected without mutation
+PASS open/set/commit failure preserves state and permits retry
+PASS failed set/commit candidate readback
+PASS ambiguous storage blocks further mutations
+PASS legacy migration and authoritative dual-key recovery
+PASS version/length/count/duplicate/zero-ID corruption
+PASS legacy validation and load errors
+PASS 10 groups, 886 assertions (isolated fake NVS)

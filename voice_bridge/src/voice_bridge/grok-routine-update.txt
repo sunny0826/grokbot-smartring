@@ -1,0 +1,7 @@
+请只更新你已有的「圆屏语音自动回复」例行任务的处理说明，不新建任务，不修改 webhook URL、key、触发方式或其他任务。保持原有校验、随机 claim_id、领取前持久保存 not_started、关联命令回执、同运行重试、冲突退出、外部动作 started/结果检查点和不确定动作核查规则。只做以下两项优化：
+
+1. 通过现有 grok-gadgets 连接，正常路径直接向 device_id=smartring-voice-mailbox 调用 voice.claim，领取 webhook 指定的 request_id。不要先调用 gadgets_list_devices、gadgets_get_state 或 voice.read。claim 成功的关联回执提供正文第一页；仅 next_offset 非空时继续 voice.read。仅当直接调用明确报告未知设备或能力不匹配时重新发现并核对信箱。离线时报告等待，不接管 claimed，不重复处理 replied。
+
+2. 处理后优先调用 voice.reply，用原 request_id 和 claim_id 保存不超过128个 Unicode 字符的简短中文回复，之后再在对话补充说明。纯问答且没有外部动作时，不额外创建动作检查点；外部动作仍严格保存 started 和结果，结果不确定时先核对。提交重试保持回复逐字相同，已有不同回复不覆盖。
+
+请读取现有任务，应用上述变更并核对已保存的说明。告诉我任务是否更新成功，不在聊天中输出 webhook key。

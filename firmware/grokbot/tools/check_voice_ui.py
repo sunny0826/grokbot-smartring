@@ -48,7 +48,8 @@ def main():
     subprocess.run(["cmake", "--build", str(build), "--config", "Debug", "--parallel", str(args.jobs)], check=True)
     binary = build / "smoke"
     subprocess.run([str(binary)] + ([str(args.page.resolve())] if args.page else []), cwd=work, check=True)
-    for name in ("home", "touch-recording", "recording", "failure", "reply-first", "reply-last"):
+    for name in ("home", "touch-recording", "recording", "failure", "waiting-first", "waiting-second",
+                 "review-static", "reply-first", "reply-last"):
         print(f"Preview: {make_png(work / (name + '.ppm'))}")
 
 

@@ -1,4 +1,5 @@
 #include "voice_http.h"
+#include "voice_scope.h"
 #include "gadget_clock.h"
 #include "gadget_endpoint.h"
 #include "esp_crt_bundle.h"
@@ -21,7 +22,8 @@ esp_err_t VoiceHttp::on_event(esp_http_client_event_t *event)
     return ESP_OK;
 }
 
-VoiceHttp::VoiceHttp(const char *path, esp_http_client_method_t method, int timeout_ms)
+VoiceHttp::VoiceHttp(const char *path, esp_http_client_method_t method, int timeout_ms,
+                     int tx_buffer_size, const VoiceScope *expected_scope)
 {
     wifi_ap_record_t ap = {};
     if (esp_wifi_sta_get_ap_info(&ap) != ESP_OK) { error = "wifi_offline"; return; }
@@ -30,6 +32,9 @@ VoiceHttp::VoiceHttp(const char *path, esp_http_client_method_t method, int time
     if (!credentials) { error = "audio_memory"; return; }
     if (!gadget_wifi_load(*credentials) || (!credentials->remote_host[0] && credentials->port == 65535)) {
         error = "wifi_not_configured"; return;
+    }
+    if (expected_scope && !voice_scope_matches(*expected_scope, *credentials)) {
+        error = "scope_mismatch"; return;
     }
     const auto endpoint = gadget_endpoint(*credentials);
     char url[256], authorization[272], device[24];
@@ -50,12 +55,17 @@ VoiceHttp::VoiceHttp(const char *path, esp_http_client_method_t method, int time
     config.timeout_ms = endpoint.remote && timeout_ms < 15000 ? 15000 : timeout_ms;
     config.disable_auto_redirect = true;
     config.max_authorization_retries = -1;
-    config.buffer_size = config.buffer_size_tx = 1024;
+    config.buffer_size = 1024;
+    config.buffer_size_tx = tx_buffer_size;
     config.method = method;
     client = esp_http_client_init(&config);
     if (client) {
-        esp_http_client_set_header(client, "Authorization", authorization);
-        esp_http_client_set_header(client, "X-Device-ID", device);
+        if (esp_http_client_set_header(client, "Authorization", authorization) != ESP_OK ||
+            esp_http_client_set_header(client, "X-Device-ID", device) != ESP_OK) {
+            error = "http_header_failed";
+            esp_http_client_cleanup(client);
+            client = nullptr;
+        }
     }
     memset(authorization, 0, sizeof(authorization));
 }

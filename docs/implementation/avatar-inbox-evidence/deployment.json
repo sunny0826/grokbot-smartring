@@ -1,0 +1,22 @@
+{
+  "recorded_at": "2026-10-17T09:54:29.135882+00:00",
+  "firmware": "0.12.2-avatar-inbox",
+  "benchmark": false,
+  "app_bytes": 1853424,
+  "flash_hash_verified": true,
+  "observation_seconds": 55,
+  "status_samples": 11,
+  "wifi_reconnected": true,
+  "observed_display_errors": 0,
+  "physical_touch_verified": false,
+  "sha256": {
+    "firmware/grokbot/main/voice_ui.cpp": "c009f092e6190fc5b4b31aef90267d12518df2b0c1eda4a261846ae5da90efec",
+    "firmware/grokbot/main/character_presenter.cpp": "205f30051dfee6010ffca530b9ef587648eabeda35a98d92b1b11af58211e92a",
+    "firmware/grokbot/main/character_presenter.h": "6f7003941120c2e942cefa8296efba7423f90f79e61ca506a9359c1d6169062d",
+    "firmware/grokbot/main/main.cpp": "748d7f543d0d9b98141c93f42b524d35651367415f583ce35e4fdcfabf60e9c3",
+    "firmware/grokbot/main/gadget.cpp": "ec3a5e32190c54eddde9e2a8dacbfbc8844ea17c5d024c38ec56c5684e710880",
+    "firmware/grokbot/tools/voice_ui_smoke/smoke.cpp": "68502eff8cd34f774c2d0890139f45bdf9cd924a863bf90207ffda70f156d7fa",
+    "firmware/grokbot/tools/preview_voice_fusion.py": "34c39bf420a5b6cb470bea345df743203a72398a4001f59ce6a7e81b02d5ce36",
+    "firmware/grokbot/build/grokbot.bin": "9f2de8f8118d8c9fc04935d4abbbd50e76e7be1298f3b8e8b0f1a425fc983974"
+  }
+}

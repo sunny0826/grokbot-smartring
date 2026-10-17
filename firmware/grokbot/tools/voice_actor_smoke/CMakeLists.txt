@@ -1,0 +1,22 @@
+cmake_minimum_required(VERSION 3.20)
+project(voice_actor_smoke LANGUAGES C CXX)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+get_filename_component(FIRMWARE "${CMAKE_CURRENT_LIST_DIR}/../.." ABSOLUTE)
+set(MAIN "${FIRMWARE}/main")
+set(LVGL "${FIRMWARE}/managed_components/lvgl__lvgl")
+if(NOT EXISTS "${LVGL}/lvgl.h")
+    message(FATAL_ERROR "LVGL missing: run idf.py reconfigure first")
+endif()
+file(GLOB_RECURSE LVGL_SOURCES CONFIGURE_DEPENDS "${LVGL}/src/*.c")
+add_library(lvgl STATIC ${LVGL_SOURCES})
+target_compile_definitions(lvgl PUBLIC LV_CONF_SKIP)
+target_include_directories(lvgl PUBLIC "${LVGL}")
+add_executable(actor main.cpp host.cpp fixture.cpp scenarios.cpp ui.cpp
+    "${MAIN}/voice.cpp" "${MAIN}/voice_mailbox.cpp" "${MAIN}/voice_journal.cpp"
+    "${MAIN}/voice_ui.cpp" "${MAIN}/voice_motion.cpp" "${MAIN}/home_controls.cpp"
+    "${MAIN}/fonts/voice_font_22.c")
+target_include_directories(actor PRIVATE include "${MAIN}")
+target_compile_options(actor PRIVATE -Wall -Wextra -Werror)
+find_package(Threads REQUIRED)
+target_link_libraries(actor PRIVATE lvgl Threads::Threads)

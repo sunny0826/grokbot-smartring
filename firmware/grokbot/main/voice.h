@@ -5,7 +5,7 @@
 enum class VoicePhase {
     Idle, Recording, Ready, Uploading, UploadFailed, Stored, Transcribing,
     Waiting, Claimed, Replied, NeedsReview, Failed, Unavailable,
-    LoadingPage, ViewingReply, ReplyFailed, MarkingRead, Preparing
+    LoadingPage, ViewingReply, ReplyFailed, Preparing = 17
 };
 enum class VoiceAction { Boot, Discard, Close, Retry, Open, Previous, Next, MarkRead };
 struct VoiceSnapshot {

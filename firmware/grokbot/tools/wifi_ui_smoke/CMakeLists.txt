@@ -16,9 +16,10 @@ target_compile_definitions(lvgl PUBLIC LV_CONF_SKIP LV_USE_QRCODE=1 LV_FONT_SOUR
 target_include_directories(lvgl PUBLIC "${LVGL}")
 target_compile_options(lvgl PUBLIC -include "${CMAKE_CURRENT_LIST_DIR}/stubs/host_config.h")
 
-add_executable(smoke smoke.cpp "${MAIN}/home_controls.cpp" "${MAIN}/wifi_setup_ui.cpp" "${MAIN}/wifi_setup_phone_ui.cpp" "${MAIN}/wifi_setup_keyboard.cpp" "${MAIN}/status_bar.cpp" "${MAIN}/voice_ui.cpp" "${MAIN}/fonts/voice_font_22.c")
+add_executable(smoke smoke.cpp "${MAIN}/home_controls.cpp" "${MAIN}/wifi_setup_ui.cpp" "${MAIN}/wifi_setup_phone_ui.cpp" "${MAIN}/wifi_setup_keyboard.cpp" "${MAIN}/status_bar.cpp" "${MAIN}/voice_ui.cpp" "${MAIN}/voice_motion.cpp" "${MAIN}/fonts/voice_font_22.c")
 target_include_directories(smoke PRIVATE "${MAIN}" "${CMAKE_CURRENT_LIST_DIR}/stubs")
 target_link_libraries(smoke PRIVATE lvgl)
+include("${FIRMWARE}/tools/voice_ui_smoke/character_sources.cmake")
 if(UNIX)
     target_link_libraries(smoke PRIVATE m)
 endif()

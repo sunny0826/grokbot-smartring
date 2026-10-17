@@ -1,0 +1,30 @@
+{
+  "firmware": "0.11.0-partial-refresh",
+  "benchmark_enabled": false,
+  "production_binary_sha256": "fa03dc812e04a4cd74b93364bb4e242d39c72a258dee09e0fed6981c7e224920",
+  "version_readback": true,
+  "wifi_reconnected": true,
+  "captured_display_errors": 0,
+  "active_fps_samples": [
+    20,
+    22,
+    20,
+    20,
+    20,
+    20,
+    20,
+    20,
+    20,
+    20
+  ],
+  "memory_min_internal": 54983,
+  "final_roundtrip": {
+    "request_id": "ce5581d227e74db8a24ab771dd02b8ea",
+    "stored_to_replied_seconds": 36.894690990448,
+    "accepted_to_claim_seconds": 20.98291516304016,
+    "claim_to_reply_seconds": 13.57578706741333,
+    "client_first_page_verified_seconds": 37.216303542023525,
+    "reply_and_crc_verified": true
+  },
+  "scope": "Single post-deployment check; serial observations are not physical microphone, touch or visible screen verification"
+}

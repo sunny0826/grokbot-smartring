@@ -5,6 +5,7 @@ import ssl
 import struct
 import subprocess
 import threading
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import pytest
 
@@ -59,6 +60,32 @@ def receiver(tmp_path, storage, tls):
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
     yield server, tls[1], credentials
+    server.shutdown()
+    thread.join()
+    server.server_close()
+
+
+@pytest.fixture
+def trigger_endpoint(tls):
+    requests = []
+    outcome = {"status": 200, "headers": {}}
+    class Handler(BaseHTTPRequestHandler):
+        def do_POST(self):
+            body = self.rfile.read(int(self.headers["Content-Length"]))
+            requests.append((self.path, dict(self.headers), json.loads(body)))
+            self.send_response(outcome["status"])
+            for key, value in outcome["headers"].items():
+                self.send_header(key, value)
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+
+        def log_message(self, *args):
+            pass
+    server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+    server.socket = tls[0].wrap_socket(server.socket, server_side=True)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    yield f"https://localhost:{server.server_port}/wake", requests, outcome, tls[1]
     server.shutdown()
     thread.join()
     server.server_close()

@@ -1,0 +1,5 @@
+read_http=blocked phase=MarkingRead immediate_idle=0
+hold_id=0 recording_while_read_blocked=0
+read_http=released phase=Idle server_read=1
+BASELINE_CONFIRMED: both target behavior assertions fail while Read is blocked
+all_host_tasks_joined=true

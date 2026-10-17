@@ -65,7 +65,7 @@ static void basePose(BotPose &o)
     o.zzzA = 0;
 }
 
-void poseFor(BotState s, float t, BotPose &o)
+void poseFor(BotState s, float t, BotPose &o, PosePlayback playback)
 {
     basePose(o);
     switch (s) {
@@ -110,16 +110,15 @@ void poseFor(BotState s, float t, BotPose &o)
         // Simplification: the body stays a ball (bloub morphs triangle->ball over
         // the first 1.6 s; omitted). The motion is carried by the rings and the
         // gaze flying around the sphere.
-        float back = easeInOutCubic(clampf((t - 1.6f) / 0.9f));
+        float back = playback == PosePlayback::Continuous ? 0.f : easeInOutCubic(clampf((t - 1.6f) / 0.9f));
         o.gaze = {
             REST_GAZE.yaw + sinf(t * 6.5f) * 65.f * (1.f - back),
             -4.f + back * 32.f,
             -13.f
         };
         o.eyeW = 0.18f; o.eyeH = 0.34f + back * 0.07f;
-        // Rings fade in over 0.8 s and out over the last 0.9 s
-        // (per-ring stagger of 0.13 s is applied by the caller via ring index)
-        o.ringA = clampf(t / 0.8f) * clampf((3.6f - t) / 0.9f);
+        const float fade_out = playback == PosePlayback::Continuous ? 1.f : clampf((3.6f - t) / 0.9f);
+        o.ringA = clampf(t / 0.8f) * fade_out;
         break;
     }
 

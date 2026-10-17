@@ -1,0 +1,8 @@
+PASS: 2620 full-frame and simulated-panel comparisons, mean dirty 57.1%, all skins/states/transitions, guards and reset
+PASS: 1920 fused character pixel comparisons, three skins, static errors, real level, phase distinction and tick wrap
+-- Configuring done (0.1s)
+-- Generating done (0.1s)
+-- Build files have been written to: /tmp/my-bot-render-throughput/build
+[ 98%] Built target lvgl
+[100%] Built target render_ui
+PASS: 180 real-LVGL composite frames, moved canvas, translucent overlay, hidden recovery; first/middle/last strip failure restores full display

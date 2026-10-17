@@ -31,6 +31,7 @@
 #include "display_te_sync.h"
 #if LVGL_VERSION_MAJOR >= 9
 #include "lvgl_private.h"
+#include "refresh_guard.h"
 #endif
 #include "lvgl_port_alignment.h"
 #include "common/display_bridge_common.h"
@@ -144,6 +145,7 @@ typedef struct esp_lv_adapter_display_bridge_v9 {
     bool idf_callbacks_registered;
     bool idf_callback_registration_enabled;
     bool te_frame_in_progress;
+    display_refresh_guard_t refresh_guard;
 
     /* --- Pipeline buffer management (owned by bridge, inited by display_bridge_pipeline_init_from_cfg) --- */
     esp_lv_adapter_display_pipeline_t pipeline;
@@ -166,6 +168,10 @@ typedef struct display_bridge_v9_hw_resource {
  *  STATIC VARIABLES
  **********************/
 static const char *TAG = "esp_lvgl:bridge_v9";
+#ifdef MY_BOT_DISPLAY_BENCHMARK
+extern void my_bot_benchmark_flush(size_t bytes, int64_t began, int64_t ended,
+    int64_t te_wait_us, bool te_timeout, bool first, bool last, bool success);
+#endif
 
 #if LVGL_VERSION_MAJOR >= 9
 #if CONFIG_SOC_PPA_SUPPORTED || CONFIG_SOC_DMA2D_SUPPORTED
@@ -1206,6 +1212,7 @@ esp_lv_adapter_display_bridge_t *esp_lv_adapter_display_bridge_v9_create(const e
     }
 
     display_bridge_v9_register_vsync(impl);
+    display_refresh_guard_attach(&impl->refresh_guard, impl->cfg.lv_disp);
 
     return &impl->base;
 #endif
@@ -1224,6 +1231,8 @@ esp_lv_adapter_display_bridge_t *esp_lv_adapter_display_bridge_v9_create(const e
 static void display_bridge_v9_destroy(esp_lv_adapter_display_bridge_t *bridge)
 {
     esp_lv_adapter_display_bridge_v9_t *impl = (esp_lv_adapter_display_bridge_v9_t *)bridge;
+
+    if (impl) display_refresh_guard_detach(&impl->refresh_guard);
 
     /* Remove rounder event callback if exists */
     if (impl && impl->cfg.lv_disp) {
@@ -1275,6 +1284,8 @@ static esp_err_t display_bridge_v9_update_panel(esp_lv_adapter_display_bridge_t 
 
     /* Update configuration */
     impl->cfg = *cfg;
+    display_refresh_guard_attach(&impl->refresh_guard, cfg->lv_disp);
+    impl->te_frame_in_progress = false;
     impl->double_sync_lock = (portMUX_TYPE)portMUX_INITIALIZER_UNLOCKED;
     impl->pending_fb = NULL;
     impl->switch_seq = 0;
@@ -2352,9 +2363,19 @@ static void display_bridge_v9_flush_gpio_te(esp_lv_adapter_display_bridge_v9_t *
         esp_lv_adapter_te_sync_begin_frame(impl->cfg.te_ctx, frame_bytes);
     }
 
+#ifdef MY_BOT_DISPLAY_BENCHMARK
+    const int64_t benchmark_began = esp_timer_get_time();
+    int64_t benchmark_te_wait = 0;
+    bool benchmark_te_timeout = false;
+#endif
     /* Wait for TE signal to avoid tearing (first chunk of a frame only) */
     if (impl->cfg.te_ctx && te_first_chunk) {
+#ifdef MY_BOT_DISPLAY_BENCHMARK
+        benchmark_te_timeout = esp_lv_adapter_te_sync_wait_for_vsync(impl->cfg.te_ctx) == ESP_ERR_TIMEOUT;
+        benchmark_te_wait = esp_timer_get_time() - benchmark_began;
+#else
         (void)esp_lv_adapter_te_sync_wait_for_vsync(impl->cfg.te_ctx);
+#endif
     }
 
     if (impl->cfg.te_ctx && te_first_chunk) {
@@ -2366,11 +2387,15 @@ static void display_bridge_v9_flush_gpio_te(esp_lv_adapter_display_bridge_v9_t *
     esp_err_t ret = esp_lcd_panel_draw_bitmap(panel_handle, offsetx1, offsety1, offsetx2 + 1, offsety2 + 1, color_map);
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "Draw bitmap failed: %s", esp_err_to_name(ret));
-        impl->te_frame_in_progress = false;
-        if (impl->cfg.te_ctx) {
+        impl->refresh_guard.failed = true;
+#ifdef MY_BOT_DISPLAY_BENCHMARK
+        my_bot_benchmark_flush(0, benchmark_began, esp_timer_get_time(), benchmark_te_wait,
+            benchmark_te_timeout, te_first_chunk, te_last_chunk, false);
+#endif
+        if (impl->cfg.te_ctx && te_last_chunk) {
             esp_lv_adapter_te_sync_record_tx_done(impl->cfg.te_ctx);
         }
-        display_manager_flush_ready(disp);
+        lv_display_flush_ready(disp);
         return;
     }
 
@@ -2380,7 +2405,13 @@ static void display_bridge_v9_flush_gpio_te(esp_lv_adapter_display_bridge_v9_t *
         esp_lv_adapter_te_sync_record_tx_done(impl->cfg.te_ctx);
     }
 
-    display_manager_flush_ready(disp);
+#ifdef MY_BOT_DISPLAY_BENCHMARK
+    my_bot_benchmark_flush((size_t)lv_area_get_size(area) * bridge_color_bytes(impl),
+        benchmark_began, esp_timer_get_time(), benchmark_te_wait,
+        benchmark_te_timeout, te_first_chunk, te_last_chunk, true);
+#endif
+    if (impl->refresh_guard.failed) lv_display_flush_ready(disp);
+    else display_manager_flush_ready(disp);
 }
 
 /**

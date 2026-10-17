@@ -2,6 +2,9 @@
 #include "voice_logic.h"
 #include "voice_settings.h"
 #include "voice_transport.h"
+#include "voice_journal.h"
+#include "voice_mailbox.h"
+#include "voice_scope.h"
 #include "bsp/smartring_plus.h"
 #include "bsp/board_config.h"
 #include "driver/gpio.h"
@@ -14,7 +17,6 @@
 #include "freertos/queue.h"
 #include "freertos/semphr.h"
 #include "freertos/task.h"
-#include "nvs.h"
 #include "nvs_flash.h"
 #include <algorithm>
 #include <atomic>
@@ -33,6 +35,13 @@ size_t samples;
 uint16_t recording_peak;
 char request_id[33];
 bool codec_ready;
+VoiceJournal journal;
+VoiceMailboxSync mailbox_sync;
+VoiceScope mailbox_scope{};
+VoiceScope request_scope{};
+std::atomic<uint32_t> config_epoch{1};
+uint32_t loaded_epoch;
+bool scope_ready;
 int64_t next_poll;
 char inbox_id[33];
 uint8_t *page_buffer;
@@ -55,28 +64,6 @@ void phase(VoicePhase value, const char *error = nullptr)
     publish();
 }
 
-bool journal(bool save)
-{
-    nvs_handle_t handle;
-    if (nvs_open("voice", NVS_READWRITE, &handle) != ESP_OK) return false;
-    esp_err_t err = save ? nvs_set_str(handle, "pending", request_id) : nvs_erase_key(handle, "pending");
-    if (err == ESP_ERR_NVS_NOT_FOUND) err = ESP_OK;
-    if (err == ESP_OK) err = nvs_commit(handle);
-    nvs_close(handle);
-    return err == ESP_OK;
-}
-
-bool restore()
-{
-    nvs_handle_t handle;
-    if (nvs_open("voice", NVS_READONLY, &handle) != ESP_OK) return false;
-    size_t size = sizeof(request_id);
-    bool ok = nvs_get_str(handle, "pending", request_id, &size) == ESP_OK && strlen(request_id) == 32;
-    nvs_close(handle);
-    if (!ok) request_id[0] = 0;
-    return ok;
-}
-
 void release_audio()
 {
     free(audio);
@@ -89,7 +76,7 @@ void release_audio()
 void close()
 {
     current.hold_id = 0;
-    if (!journal(false)) {
+    if (!journal.clear_pending()) {
         phase(VoicePhase::Unavailable, "storage_unavailable");
         return;
     }
@@ -101,6 +88,7 @@ void close()
     request_id[0] = 0;
     current.page_count = current.page_index = 0;
     next_poll = 0;
+    mailbox_sync.refresh();
     current.duration_ms = current.peak = 0;
     phase(VoicePhase::Idle);
 }
@@ -133,6 +121,7 @@ void begin()
         if (i2s_channel_read(bsp_audio_get_rx(), scratch, 960 * 4, &discarded, 0) != ESP_OK || !discarded) break;
     }
     for (int i = 0; i < 4; ++i) snprintf(request_id + i * 8, 9, "%08lx", (unsigned long)esp_random());
+    request_scope = mailbox_scope;
     recording_peak = 0;
     current.duration_ms = current.peak = 0;
     phase(VoicePhase::Recording);
@@ -162,19 +151,21 @@ void send()
         phase(VoicePhase::Unavailable, "empty_recording");
         return;
     }
-    if (!journal(true)) {
+    VoiceReceipt pending{request_scope};
+    strlcpy(pending.id, request_id, sizeof(pending.id));
+    if (!scope_ready || !journal.set_pending(pending)) {
         phase(VoicePhase::Ready, "storage_unavailable");
         return;
     }
     phase(VoicePhase::Uploading);
-    accept_reply(voice_exchange(VoiceRequest::Upload, request_id, audio, samples));
+    accept_reply(voice_exchange(VoiceRequest::Upload, request_id, audio, samples, &request_scope));
 }
 
 void load_page(uint16_t index)
 {
     current.page_index = index;
     phase(VoicePhase::LoadingPage);
-    uint8_t *downloaded = voice_download_page(request_id, index, current.page_count);
+    uint8_t *downloaded = voice_download_page(request_id, index, current.page_count, &request_scope);
     if (!downloaded) { phase(VoicePhase::ReplyFailed, "page_download_failed"); return; }
     xSemaphoreTake(snapshot_lock, portMAX_DELAY);
     free(page_buffer);
@@ -192,9 +183,10 @@ void open_reply()
         if (current.phase == VoicePhase::Idle) {
             if (!current.unread || !inbox_id[0]) return;
             strlcpy(request_id, inbox_id, sizeof(request_id));
+            request_scope = mailbox_scope;
         }
         phase(VoicePhase::LoadingPage);
-        auto reply = voice_exchange(VoiceRequest::Status, request_id);
+        auto reply = voice_exchange(VoiceRequest::Status, request_id, nullptr, 0, &request_scope);
         if (!reply.ok || reply.phase != VoicePhase::Replied) {
             phase(VoicePhase::ReplyFailed, "reply_unavailable"); return;
         }
@@ -207,9 +199,12 @@ void open_reply()
 void mark_read()
 {
     if (current.page_index + 1 != current.page_count) return;
-    phase(VoicePhase::MarkingRead);
-    auto reply = voice_exchange(VoiceRequest::Read, request_id);
-    if (!reply.ok || !reply.read) { phase(VoicePhase::ReplyFailed, "read_unconfirmed"); return; }
+    VoiceReceipt receipt{request_scope};
+    strlcpy(receipt.id, request_id, sizeof(receipt.id));
+    if (journal.mark_read(receipt) != VoiceJournalResult::Saved) {
+        phase(VoicePhase::ViewingReply, "read_save_failed");
+        return;
+    }
     current.unread = false;
     inbox_id[0] = 0;
     close();
@@ -233,12 +228,12 @@ void handle(const Input &input)
     case VoiceIntent::Send: send(); break;
     case VoiceIntent::RetryUpload:
         phase(VoicePhase::Uploading);
-        accept_reply(audio ? voice_exchange(VoiceRequest::Upload, request_id, audio, samples) :
-                            voice_exchange(VoiceRequest::Status, request_id));
+        accept_reply(audio ? voice_exchange(VoiceRequest::Upload, request_id, audio, samples, &request_scope) :
+                            voice_exchange(VoiceRequest::Status, request_id, nullptr, 0, &request_scope));
         break;
     case VoiceIntent::RetryRemote:
         phase(VoicePhase::Uploading);
-        accept_reply(voice_exchange(VoiceRequest::Retry, request_id));
+        accept_reply(voice_exchange(VoiceRequest::Retry, request_id, nullptr, 0, &request_scope));
         break;
     case VoiceIntent::Discard:
     case VoiceIntent::Close: close(); break;
@@ -304,9 +299,47 @@ void finish_work()
     xSemaphoreGive(snapshot_lock);
 }
 
+void mailbox_finished()
+{
+    xSemaphoreTake(snapshot_lock, portMAX_DELAY);
+    settings_gate.finish_mailbox();
+    xSemaphoreGive(snapshot_lock);
+}
+
+void mailbox_step()
+{
+    if (current.phase == VoicePhase::Recording || current.phase == VoicePhase::Preparing) return;
+    char found[33]{};
+    if (mailbox_sync.receive(journal, mailbox_scope, current.phase, current.generation,
+        config_epoch.load(), esp_timer_get_time(), found)) {
+        const bool unread = found[0];
+        if (current.unread != unread || strcmp(inbox_id, found)) ++current.generation;
+        current.unread = unread;
+        strlcpy(inbox_id, found, sizeof(inbox_id));
+        publish();
+    }
+    VoiceMailboxWork work;
+    if (!scope_ready || !mailbox_sync.next(journal, mailbox_scope, current.phase,
+        current.generation, config_epoch.load(), esp_timer_get_time(), work)) return;
+    xSemaphoreTake(snapshot_lock, portMAX_DELAY);
+    const bool reserved = !hold_control.snapshot().id && !uxQueueMessagesWaiting(inputs) &&
+                          settings_gate.begin_mailbox();
+    xSemaphoreGive(snapshot_lock);
+    if (!reserved) return;
+    if (voice_mailbox_submit(work)) mailbox_sync.submitted(work);
+    else mailbox_finished();
+}
+
 void worker(void *)
 {
-    bool recover = restore();
+    scope_ready = voice_current_scope(mailbox_scope);
+    loaded_epoch = config_epoch.load();
+    if (!journal.load(mailbox_scope)) { phase(VoicePhase::Unavailable, "storage_unavailable"); vTaskDelete(nullptr); }
+    bool recover = journal.pending().id[0] && journal.pending().scope == mailbox_scope && scope_ready;
+    if (recover) {
+        strlcpy(request_id, journal.pending().id, sizeof(request_id));
+        request_scope = journal.pending().scope;
+    }
     if (recover) phase(VoicePhase::Uploading);
     for (;;) {
         xSemaphoreTake(snapshot_lock, portMAX_DELAY);
@@ -315,9 +348,21 @@ void worker(void *)
         xSemaphoreGive(snapshot_lock);
         if (paused) { vTaskDelay(pdMS_TO_TICKS(30)); continue; }
         if (recover && begin_poll()) {
-            accept_reply(voice_exchange(VoiceRequest::Status, request_id));
+            accept_reply(voice_exchange(VoiceRequest::Status, request_id, nullptr, 0, &request_scope));
             finish_work();
             recover = false;
+        }
+        if (loaded_epoch != config_epoch.load()) {
+            loaded_epoch = config_epoch.load();
+            const auto previous = mailbox_scope;
+            scope_ready = voice_current_scope(mailbox_scope);
+            if (!scope_ready || previous != mailbox_scope) {
+                current.unread = false;
+                inbox_id[0] = 0;
+                ++current.generation;
+                publish();
+            }
+            mailbox_sync.refresh();
         }
         handle_hold();
         Input input;
@@ -333,24 +378,13 @@ void worker(void *)
         if ((current.phase == VoicePhase::Stored || current.phase == VoicePhase::Transcribing ||
              current.phase == VoicePhase::Waiting || current.phase == VoicePhase::Claimed) &&
             esp_timer_get_time() >= next_poll && begin_poll()) {
-            auto reply = voice_exchange(VoiceRequest::Status, request_id);
+            auto reply = voice_exchange(VoiceRequest::Status, request_id, nullptr, 0, &request_scope);
             if (reply.ok) accept_reply(reply);
             else phase(VoicePhase::UploadFailed, reply.error);
             next_poll = esp_timer_get_time() + 2000000;
             finish_work();
         }
-        if (current.phase == VoicePhase::Idle && esp_timer_get_time() >= next_poll && begin_poll()) {
-            auto reply = voice_exchange(VoiceRequest::Inbox, "");
-            if (reply.ok) {
-                bool unread = reply.phase == VoicePhase::Replied;
-                if (current.unread != unread || strcmp(inbox_id, reply.request_id)) ++current.generation;
-                current.unread = unread;
-                strlcpy(inbox_id, reply.request_id, sizeof(inbox_id));
-                publish();
-            }
-            next_poll = esp_timer_get_time() + 5000000;
-            finish_work();
-        }
+        mailbox_step();
     }
 }
 
@@ -445,6 +479,7 @@ void voice_settings_resume(uint32_t operation)
 {
     if (!snapshot_lock) return;
     xSemaphoreTake(snapshot_lock, portMAX_DELAY);
+    if (settings_gate.status(operation) != VoiceSettingsStatus::Inactive) ++config_epoch;
     settings_gate.resume(operation);
     xSemaphoreGive(snapshot_lock);
 }
@@ -462,6 +497,7 @@ void voice_start()
         phase(VoicePhase::Unavailable, "voice_init_failed");
         return;
     }
+    if (!voice_mailbox_start(mailbox_finished)) { phase(VoicePhase::Unavailable, "audio_memory"); return; }
     if (xTaskCreate(worker, "voice", 12288, nullptr, 4, nullptr) != pdPASS) {
         phase(VoicePhase::Unavailable, "audio_memory");
         return;

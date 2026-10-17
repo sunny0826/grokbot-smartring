@@ -1,0 +1,3 @@
+Hold/release/cancel ownership, BOOT debounce, record/send states, silence gate and WAV contract passed
+Voice settings pause: in-flight HTTP boundary, retained states, input exclusion and stale/cancelled lease PASS
+Voice protocol: real cJSON states, inbox, bounds, ownership and malformed responses PASS

@@ -16,6 +16,8 @@ skin, `pika` (yellow blob with capsule eyes and red cheeks, after
 skin, `rowlet` (tan owl with a white face mask, orange beak and green leaf bow
 tie, after `reference/character-ref-2.png`), does the same.
 
+已读操作已改为本地保存后立即返回，确认在后台重试：[实现与验证](docs/implementation/async-read.md)。
+
 ## Features
 
 - **Remote Wi-Fi access** — optional public WSS/HTTPS connects the screen to
@@ -29,8 +31,12 @@ tie, after `reference/character-ref-2.png`), does the same.
   upload, or slide off to cancel. Audio reaches the Mac
   for local transcription. A software mailbox uses the existing Grok OAuth MCP
   connection to claim requests and return short Chinese replies to the screen.
-  Ask the Bot to process the mailbox; automatic wake-up is not implemented.
+  An optional [Bot routine trigger](docs/automatic-voice.md) wakes the same Bot
+  when transcription is ready; without setup, ask it to process the mailbox.
   See [setup and current limits](docs/boot-voice.md).
+- **Voice character animation** — the selected character reacts to recording
+  volume, upload, waiting and processing; reply reading gets the full screen.
+  [Animation preview and verification](docs/implementation/voice-character-fusion.html).
 - **Gravity physics** — tilt to roll, circular boundary with restitution bounce,
   velocity-aligned jelly squash, gaze follows the downhill direction
 - **Idle carousel** — after 1.5 s lying flat: `idle → thinking → idle → happy → idle →

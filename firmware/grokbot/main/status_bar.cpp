@@ -113,5 +113,6 @@ void status_bar_create(lv_obj_t *screen, bool battery_available)
     lv_timer_create(refresh, 1000, nullptr);
     lv_timer_create([](lv_timer_t *) {
         lv_obj_set_flag(s_bar, LV_OBJ_FLAG_HIDDEN, !home_controls_visible());
-    }, 100, nullptr);
+        lv_obj_set_style_opa(s_bar, home_controls_opacity(), 0);
+    }, LV_DEF_REFR_PERIOD, nullptr);
 }

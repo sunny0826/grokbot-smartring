@@ -61,7 +61,7 @@ int main()
     assert(!voice_has_audio(VOICE_RATE, 0));
     assert(voice_has_audio(VOICE_RATE, 1000));
     for (VoicePhase phase : {VoicePhase::Recording, VoicePhase::Ready, VoicePhase::Uploading,
-             VoicePhase::LoadingPage, VoicePhase::MarkingRead}) {
+             VoicePhase::LoadingPage}) {
         assert(voice_intent(phase, VoiceAction::Open) == VoiceIntent::None);
         assert(voice_intent(phase, VoiceAction::MarkRead) == VoiceIntent::None);
     }

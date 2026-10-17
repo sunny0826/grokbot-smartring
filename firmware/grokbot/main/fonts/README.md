@@ -31,7 +31,9 @@ Add `voice_ui.cpp` and `fonts/voice_font_22.c` to the main component's `SRCS`.
 Call `voice_ui_create(screen)` after the existing screen widgets are created,
 under the display lock. Use `voice_ui_active()` in the screen's touch handler
 before pet gestures; the overlay also disables input event and gesture bubbling.
-The UI refresh timer runs every 100 ms in the LVGL task.
+`CharacterPresenter::update(now)` refreshes the voice UI and character from one
+snapshot in the main LVGL frame (33 ms target). There is no separate voice UI
+timer. Attach the presenter to the shared canvas before starting that frame loop.
 
 ## Host UI check
 
@@ -52,6 +54,10 @@ Pass `--page /path/to/page.bin` to render a real VPG1 page produced by the Mac.
 The smoke checks idle visibility, recording cancellation, stale generation
 rejection, absent upload buttons, mailbox states, unread reopening, page controls,
 explicit read, display buffer ownership, pet event isolation, and overlay recreation.
+It also checks all three character skins, the first visible voice frame, static
+error refreshes, and canvas hiding/restoration. `fusion-frames/` contains actual
+LVGL captures of six injected voice phases for each skin; these are host previews,
+not physical-device captures or end-to-end voice evidence.
 It mocks only the voice snapshot/action boundary and uses actual LVGL rendering
 and events; microphone, upload, and physical touch behavior still need device
 verification.

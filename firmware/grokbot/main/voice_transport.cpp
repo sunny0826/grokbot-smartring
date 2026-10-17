@@ -6,6 +6,25 @@
 #include <cstring>
 
 namespace {
+bool exclusion_header(const VoiceReadExclusions &excluded, char (&value)[528])
+{
+    if (excluded.count > VOICE_READ_LIMIT) return false;
+    size_t offset = 0;
+    for (size_t i = 0; i < excluded.count; ++i) {
+        const char *id = excluded.ids[i];
+        if (strnlen(id, sizeof(excluded.ids[i])) != 32) return false;
+        if (i) value[offset++] = ',';
+        for (size_t j = 0; j < 32; ++j) {
+            const char c = id[j];
+            if (!((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') ||
+                  (c >= 'A' && c <= 'F'))) return false;
+            value[offset++] = c >= 'A' && c <= 'F' ? c + ('a' - 'A') : c;
+        }
+    }
+    value[offset] = 0;
+    return true;
+}
+
 bool write_all(esp_http_client_handle_t client, const void *buffer, size_t size)
 {
     auto bytes = static_cast<const char *>(buffer);
@@ -22,21 +41,32 @@ bool write_all(esp_http_client_handle_t client, const void *buffer, size_t size)
 }
 
 VoiceReply voice_exchange(VoiceRequest request, const char *request_id,
-                         const int16_t *samples, size_t count)
+                         const int16_t *samples, size_t count,
+                         const VoiceScope *scope, const VoiceReadExclusions *excluded)
 {
     VoiceReply result;
     strlcpy(result.error, "upload_unconfirmed", sizeof(result.error));
+    char exclusions[528] = {};
+    if (request == VoiceRequest::Inbox && excluded && !exclusion_header(*excluded, exclusions)) {
+        strlcpy(result.error, "invalid_read_exclusions", sizeof(result.error));
+        return result;
+    }
     char path[128];
     if (request == VoiceRequest::Inbox) strlcpy(path, "/v1/inbox", sizeof(path));
     else snprintf(path, sizeof(path), "/v1/recordings/%s%s", request_id,
                   request == VoiceRequest::Retry ? "/retry" : request == VoiceRequest::Read ? "/read" : "");
     VoiceHttp http(path, request == VoiceRequest::Upload ? HTTP_METHOD_PUT :
         request == VoiceRequest::Retry || request == VoiceRequest::Read ? HTTP_METHOD_POST : HTTP_METHOD_GET,
-        request == VoiceRequest::Inbox ? 1500 : 8000);
+        request == VoiceRequest::Inbox ? 1500 : 8000,
+        request == VoiceRequest::Inbox ? 2048 : 1024, scope);
     auto client = http.client;
     if (!client) strlcpy(result.error, http.error, sizeof(result.error));
     if (client) {
-        esp_http_client_set_header(client, "Content-Type", "audio/wav");
+        if (esp_http_client_set_header(client, "Content-Type", "audio/wav") != ESP_OK ||
+            (exclusions[0] && esp_http_client_set_header(client, "X-Voice-Read-Exclude", exclusions) != ESP_OK)) {
+            strlcpy(result.error, "http_header_failed", sizeof(result.error));
+            return result;
+        }
         uint8_t header[44];
         voice_wav_header(header, count);
         size_t bytes = request == VoiceRequest::Upload ? 44 + count * 2 : 0;
