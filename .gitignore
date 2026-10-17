@@ -7,12 +7,9 @@ firmware/grokbot/sdkconfig.old
 # 注意：components/ 目录是本地化的 BSP/适配器补丁，必须入库，不要忽略
 firmware/grokbot/managed_components/
 
-# ---- 第三方参考代码（可随时重新克隆）----
+# ---- 本地参考资料（不上传 GitHub）----
 # git clone https://github.com/jeremy-prt/bloub reference/bloub
-reference/bloub/
-reference/smartring-plus-full/
-reference/smartring_plus/
-reference/grok-gadgets-esp32-sdk/
+/reference/
 
 # ---- Python 虚拟环境（网关/PlatformIO 工具链）----
 .venv-grok/
