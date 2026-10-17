@@ -1,0 +1,8 @@
+ts	phase	decision	why	evidence	result
+2026-10-17T00:23:57Z	start	开始 MCP 语音接入设计与实施；主 Agent，默认模型	用户明确要求 rigor 设计并接入，沿用当前 OAuth MCP，撤回 webhook 假设	用户本轮指令；docs/grok-bot-setup.md；现网 MCP 6 工具查询	先独立设计，再实施与验证；未授权 commit/push 或外部聊天
+2026-10-17T00:23:57Z	scope	完成录音持久请求读取、原子领取、回复回屏与状态恢复	现有 MCP 只主动读取内存事件，音频服务尚未接入工具	gateway mcp_server.py/domain.py；voice_bridge/	阻塞前置是公共契约；其后服务、固件可按目录分工；SQLite 单拥有者；本地进程重启由主 Agent 单独执行
+2026-10-17T00:27:50Z	design	选择 B 软件信箱，128 码点短回复，Mac 持久 RGB565 分页	复用既有六工具和 OAuth，不维护网关分支；当前 Flash 仅余 78432B	/tmp/my-bot-mcp-design-a.md；/tmp/my-bot-mcp-design-b.md；/tmp/my-bot-mcp-design-judgement.md；docs/implementation/mcp-voice-contract.md	独立候选与独立评判完成（同默认模型）；吸收 A 持久不可变页面与状态分离；拒绝长回复分块及自动重领
+2026-10-17T00:37:45Z	review	修复独立审核的两项 P2	命令结果不泄露 claim_id；父页面销毁不能二次释放未读按钮	test_gateway 4 passed；真实 LVGL 根删除、整屏清理及重建通过；最终固件编译通过	两项均修复并验证
+2026-10-17T00:38:55Z	integrate	切换新版服务并烧录 0.5.0 固件	原 MCP 可发现语音信箱，音频与中文页面独立 HTTPS 传输	原网关未重启；真实 LAN 合成语音→原 MCP 领取回复→91408B 页面；真机 USB unread=true	程序链路通过；真实 Bot、麦克风和目视仍待用户验收
+2026-10-17T00:58:53Z	diagnose	加入 BOOT 电平与处理阶段诊断	用户报告实体 BOOT 无响应，旧状态不能区分检测失败与初始化阻塞	0.5.1 app-flash 成功；USB Idle/wifi 无错误；未按时计数为 0	等待用户在监听期间按键，原因尚未确定
+2026-10-17T01:17:57Z	touch	按用户选择新增屏幕按住说话入口	实体按键操作有长按关机行为；触摸入口可直接显示录音与取消反馈	真实 LVGL 指针输入：松手发送、滑出取消、快速点按、覆盖层保持捕获通过；C++ 手势归属测试及编译烧录通过	0.6.0 已烧录；等待实体触摸录音验收

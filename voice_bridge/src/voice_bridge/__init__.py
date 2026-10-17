@@ -1,0 +1,1 @@
+"""Private LAN voice receiver."""

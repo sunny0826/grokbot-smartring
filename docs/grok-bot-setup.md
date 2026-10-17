@@ -1,5 +1,7 @@
 # Grok Bot 接入指南（grok-gadgets 协议 0.1.0）
 
+日常操作请先看[圆屏使用说明书](grok-bot-user-guide.html)，本页用于部署维护。
+
 > 2026-10-16 — SmartRing-Plus（ESP32-S3）通过 grok-gadgets-gateway 接入 Grok Bot 的
 > 完整部署与运维说明。全链路已验证：Grok Bot 远程命令 executed、物理事件实时到达网关。
 
@@ -9,6 +11,12 @@
 
 ## 架构
 
+Cloudflare 打通的是 **Grok Bot → Mac 网关**，因此手机可以使用外部 Wi-Fi 或移动网络。
+默认 **圆屏 → Mac 网关** 使用 LAN TLS，需要同一局域网。
+`0.7.0-remote` 另支持公网 WSS/HTTPS；跨网配置与启动步骤见[跨网使用](remote-access.md)。
+原 MCP 路由仍到 `127.0.0.1:8766`。远程模式新增精确设备路径，控制经独立
+relay 转到 loopback 设备端口；不直接公开 LAN TLS `8767`。以下为原 LAN 部署说明。
+
 ```
 Grok Bot (xAI app)
   │  HTTPS + OAuth
@@ -17,10 +25,8 @@ gadget.example.com          ← Cloudflare 命名隧道（固定域名）
   │  tunnel id TUNNEL_ID
   ▼
 grok-gadgets-gateway serve         ← 本地 MCP 服务 127.0.0.1:8766，OAuth 保护
-  │  设备监听 127.0.0.1:8764
-  ▼
-usb-bridge                         ← 串口 ↔ TCP 桥（同步请求-响应转发）
-  │  /dev/cu.usbmodemXXXX
+  │  LAN TLS 监听 GATEWAY_LAN_IP:8767
+  │  同一局域网的 Wi-Fi
   ▼
 ESP32-S3 固件（firmware/grokbot）  ← gadget 协议 0.1.0 客户端
 ```
@@ -35,13 +41,41 @@ ESP32-S3 固件（firmware/grokbot）  ← gadget 协议 0.1.0 客户端
 | 隧道配置 | `~/.cloudflared/` | `cert.pem`、`config.yml`、`<tunnel-id>.json` |
 | 请求日志 | `~/grok-gadgets-requests.jsonl` | 所有工具调用审计（remote 字段区分本地/远程） |
 
-## 启动顺序（重启电脑后按此拉起）
+## 当前 Wi-Fi 模式启动顺序
+
+仅在对应进程未运行时启动，避免端口冲突。设备已保存 Wi-Fi 配置，无需每次配网。
+将下列域名和 `GATEWAY_LAN_IP` 替换为现有配置；LAN 监听地址应与已签发证书
+和设备保存的网关地址一致。Mac 需要保持唤醒。
 
 ```bash
 cd ~/codes/my-bot
 
-# 1. 网关（注意 NO_PROXY 必须，否则本机代理会导致依赖崩溃）
-NO_PROXY="localhost,127.0.0.1,::1" nohup .venv-grok/bin/grok-gadgets-gateway serve \
+env -u ALL_PROXY -u all_proxy -u HTTP_PROXY -u http_proxy \
+  -u HTTPS_PROXY -u https_proxy \
+  nohup .venv-grok/bin/grok-gadgets-gateway serve \
+  --credentials ~/.config/grok-gadgets/credentials.json \
+  --lan-listen GATEWAY_LAN_IP:8767 \
+  --allowed-host gadget.example.com --oauth \
+  --request-log ~/grok-gadgets-requests.jsonl \
+  > /tmp/ggg-serve.log 2>&1 &
+
+nohup cloudflared tunnel run grok-gadgets > /tmp/ggg-tunnel.log 2>&1 &
+```
+
+当前模式不启动 `usb-bridge`。给设备供电后，它会自动连接保存的 Wi-Fi 和网关。
+网关和隧道尚未配置开机自启。
+
+## 未配网设备的 USB 模式启动顺序
+
+以下是固件尚未保存 Wi-Fi 配置时的备用路径，不与上面的 Wi-Fi 启动命令同时运行。
+
+```bash
+cd ~/codes/my-bot
+
+# 1. 网关（仅为本次进程清除代理环境变量）
+env -u ALL_PROXY -u all_proxy -u HTTP_PROXY -u http_proxy \
+  -u HTTPS_PROXY -u https_proxy \
+  nohup .venv-grok/bin/grok-gadgets-gateway serve \
   --simulator \
   --credentials ~/.config/grok-gadgets/credentials.json \
   --device-port 8764 \
@@ -85,7 +119,7 @@ idf.py -p /dev/cu.usbmodemXXXX flash      # 烧完重启桥接
 
 - 连接器 URL：`https://gadget.example.com/mcp`
 - OAuth 授权：Grok Bot 给出 8 位授权码后，在网关侧批准：
-  `NO_PROXY="localhost,127.0.0.1,::1" .venv-grok/bin/grok-gadgets-gateway oauth approve <CODE>`
+  `.venv-grok/bin/grok-gadgets-gateway oauth approve CODE`（将 `CODE` 替换为页面上的授权码）
 - 授权态查看：`... oauth list`（refresh token 有效期约 30 天，滚动续期）
 
 ## 常用运维命令
@@ -109,8 +143,8 @@ tail -5 ~/grok-gadgets-requests.jsonl
 
 ## 踩坑记录（不要再踩）
 
-1. **本机代理**：所有网关 CLI 和本地 HTTP 脚本必须前缀 `NO_PROXY="localhost,127.0.0.1,::1"`。
-   只写 `localhost,127.0.0.1` 不含 `[::1]` 会让其依赖 httpx2 直接崩溃。
+1. **本机代理**：本机 SOCKS 代理可能让 httpx2 在创建客户端时因缺少 `socksio` 失败。
+   仅设置 `NO_PROXY` 不一定有效；可按上述命令为本次进程清除代理环境变量。
 2. **串口节点会变**：设备每次复位/重插，macOS 可能重新编号。
    桥接起不来先 `ls /dev/cu.usbmodem*`。
 3. **serve 重启后桥接不一定重连**：重启 serve 后检查 `lsof -nP -iTCP:8764` 有无 ESTABLISHED，

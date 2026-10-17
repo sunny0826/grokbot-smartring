@@ -1,0 +1,23 @@
+cmake_minimum_required(VERSION 3.20)
+project(voice_ui_smoke LANGUAGES C CXX)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+get_filename_component(FIRMWARE "${CMAKE_CURRENT_LIST_DIR}/../.." ABSOLUTE)
+set(LVGL "${FIRMWARE}/managed_components/lvgl__lvgl")
+set(MAIN "${FIRMWARE}/main")
+if(NOT EXISTS "${LVGL}/lvgl.h")
+    message(FATAL_ERROR "LVGL is missing; run idf.py reconfigure in firmware/grokbot first")
+endif()
+
+file(GLOB_RECURSE LVGL_SOURCES CONFIGURE_DEPENDS "${LVGL}/src/*.c")
+add_library(lvgl STATIC ${LVGL_SOURCES})
+target_compile_definitions(lvgl PUBLIC LV_CONF_SKIP)
+target_include_directories(lvgl PUBLIC "${LVGL}")
+
+add_executable(smoke smoke.cpp "${MAIN}/home_controls.cpp" "${MAIN}/voice_ui.cpp" "${MAIN}/fonts/voice_font_22.c")
+target_include_directories(smoke PRIVATE "${MAIN}")
+target_link_libraries(smoke PRIVATE lvgl)
+if(UNIX)
+    target_link_libraries(smoke PRIVATE m)
+endif()

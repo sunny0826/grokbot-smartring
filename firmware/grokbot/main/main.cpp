@@ -19,6 +19,10 @@
 #include "bot_character.h"
 #include "gadget.h"
 #include "status_bar.h"
+#include "home_controls.h"
+#include "voice.h"
+#include "voice_ui.h"
+#include "wifi_setup_ui.h"
 
 static const char *TAG = "grokbot";
 
@@ -117,6 +121,10 @@ static void frame_cb(lv_timer_t *)
 
     /* ---- Gadget commands from Grok Bot: executed in LVGL context before physics ---- */
     gadget_drain();
+    if (voice_ui_active() || wifi_setup_ui_active()) {
+        gadget_publish();
+        return;
+    }
 
     /* ---- Read IMU: "downhill force" with gx right, gy down (m/s^2); the BSP applies EMA filtering */
     float gx = 0, gy = 0;
@@ -429,6 +437,10 @@ static void do_poke(bool remote = false)
  * pokes on release), so the start of a swipe never triggers a spurious poke. */
 static void touch_cb(lv_event_t *e)
 {
+    if (voice_ui_active() || wifi_setup_ui_active()) {
+        s_tactive = false;
+        return;
+    }
     lv_indev_t *indev = lv_indev_active();
     if (!indev) return;
     lv_point_t pt;
@@ -587,11 +599,16 @@ extern "C" void app_main(void)
     lv_obj_add_event_cb(scr, touch_cb, LV_EVENT_PRESSING, NULL);
     lv_obj_add_event_cb(scr, touch_cb, LV_EVENT_RELEASED, NULL);
 
+    home_controls_attach(scr);
+    home_controls_attach(s_canvas);
     status_bar_create(scr, s_bat_ok);
+    voice_ui_create(scr);
+    wifi_setup_ui_create();
     lv_timer_create(frame_cb, 16, NULL);  // ~60 fps, matching the TE-gated panel refresh rate
     esp_lv_adapter_unlock();
 
     gadget_start();  // USB protocol task; console is disabled, the port is JSON only
+    voice_start();
 
     ESP_LOGI(TAG, "grokbot started, canvas %dx%d, %d characters (swipe to switch)", CANVAS, CANVAS,
              character_count());

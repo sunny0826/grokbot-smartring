@@ -106,13 +106,16 @@
 #define BOARD_AUDIO_SAMPLE_RATE   48000
 #define BOARD_AUDIO_MCLK_MULT     384   /* MCLK = 384 × Fs，与 ES8311 coeff 匹配 */
 
+/* BOOT is active-low; read only after normal boot, preserving its strap function. */
+#define BOARD_BOOT_IO             GPIO_NUM_0
+
 /* IMU 中断 1（QMI8658A INT1；INT2 未连接，原理图为空网络）。
  * 当前 bsp_imu 用 250Hz 任务轮询未使用此脚，预留给运动唤醒/敲击检测 */
 #define BOARD_IMU_INT1_IO         GPIO_NUM_42
 
 /* ------------------------------------------------------------------------
  * 系统脚登记（芯片功能占用，勿当普通 IO 使用；只作完整性登记，代码勿引用）
- *   GPIO0       BOOT（strapping，上电按住进下载模式）
+ *   GPIO0       BOOT（见 BOARD_BOOT_IO；上电按住进下载模式）
  *   GPIO19/20   USB_N / USB_P（原生 USB，控制台/烧录走此口）
  *   GPIO43/44   UART0_RX / TX（备用调试串口）
  *   GPIO33~37   PSRAM 专用（MSPI 存储器总线 D4~D7/DQS，IOMUX 固定路径，

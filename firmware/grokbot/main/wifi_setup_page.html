@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <meta name="referrer" content="no-referrer">
+  <title>MyBot · 连接 Wi-Fi</title>
+  <link rel="stylesheet" href="/style.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <main>
+    <header><a class="wordmark" href="/" aria-label="MyBot 配网首页">mybot<span aria-hidden="true">●</span></a><span id="time" class="meta">本地设置</span></header>
+    <section class="intro"><p class="eyebrow">让设备连接你的网络</p><h1>连接 Wi-Fi</h1><p class="lead">选一个附近的网络，剩下的交给 MyBot。</p></section>
+    <section id="notice" class="notice" role="status" aria-live="polite"><span id="signal" class="signal" aria-hidden="true"></span><div><h2 id="state-title">正在读取设备状态</h2><p id="state-detail">请保持连接 MyBot 临时热点。</p></div></section>
+    <section id="chooser" aria-labelledby="networks-title" hidden>
+      <div class="section-head"><h2 id="networks-title">附近的网络</h2><button id="scan" type="button" class="text-button">重新搜索</button></div>
+      <div id="networks" class="networks" role="group" aria-label="选择 Wi-Fi 网络"></div>
+      <p id="empty" class="empty" hidden>暂时没有找到网络。确认路由器已开启，再搜索一次。</p>
+      <form id="connect-form">
+        <div id="selected" class="selected" hidden><span class="meta">已选择</span><strong id="selected-name"></strong></div>
+        <div id="password-field" hidden><label for="password">Wi-Fi 密码</label><input id="password" name="password" type="password" maxlength="64" autocomplete="off" autocapitalize="none" spellcheck="false" enterkeyhint="go"><label class="show-password"><input id="show-password" type="checkbox">显示密码</label></div>
+        <p id="network-note" class="network-note"></p>
+        <p id="form-error" class="form-error" role="alert"></p>
+        <button id="connect" class="primary" type="submit" disabled>选择网络后连接</button>
+      </form>
+    </section>
+    <button id="cancel" type="button" class="secondary" hidden>取消当前连接</button>
+    <button id="refresh" type="button" class="secondary" hidden>重新读取状态</button>
+    <button id="close" type="button" class="secondary" hidden>结束手机配网</button>
+    <footer><p>手机提示「无法上网」时，请继续使用这个 Wi-Fi。连接期间热点可能短暂断开，重新连回 MyBot 热点即可。</p><p>要连接这台手机自己的热点？请使用另一台设备，或在 MyBot 圆屏输入。</p></footer>
+  </main>
+</body>
+</html>

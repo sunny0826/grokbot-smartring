@@ -1,10 +1,13 @@
 #include "status_bar.h"
+#include "home_controls.h"
+#include "wifi_setup_ui.h"
 
 #include "bsp/smartring_plus.h"
 #include "esp_log.h"
 #include "esp_wifi.h"
 
 static lv_obj_t *s_wifi;
+static lv_obj_t *s_bar;
 static lv_obj_t *s_wifi_slash;
 static lv_obj_t *s_battery;
 static lv_obj_t *s_charge;
@@ -65,16 +68,18 @@ static lv_obj_t *label(lv_obj_t *parent, int x, const char *text)
     lv_obj_set_style_text_font(obj, &lv_font_montserrat_14, 0);
     lv_obj_set_style_text_color(obj, lv_color_hex(INK), 0);
     lv_label_set_text(obj, text);
-    lv_obj_set_pos(obj, x, 6);
+    lv_obj_set_pos(obj, x, 14);
     return obj;
 }
 
 void status_bar_create(lv_obj_t *screen, bool battery_available)
 {
     s_battery_available = battery_available;
-    lv_obj_t *bar = lv_obj_create(screen);
+    (void)screen;
+    lv_obj_t *bar = s_bar = lv_obj_create(lv_layer_top());
+    lv_obj_add_flag(bar, LV_OBJ_FLAG_HIDDEN);
     lv_obj_remove_style_all(bar);
-    lv_obj_set_size(bar, 136, 28);
+    lv_obj_set_size(bar, 136, 44);
     lv_obj_align(bar, LV_ALIGN_TOP_MID, 0, 16);
     lv_obj_set_style_bg_color(bar, lv_color_hex(0xece7db), 0);
     lv_obj_set_style_bg_opa(bar, LV_OPA_COVER, 0);
@@ -82,9 +87,18 @@ void status_bar_create(lv_obj_t *screen, bool battery_available)
     lv_obj_remove_flag(bar, LV_OBJ_FLAG_CLICKABLE);
     lv_obj_remove_flag(bar, LV_OBJ_FLAG_SCROLLABLE);
 
-    s_wifi = label(bar, 10, LV_SYMBOL_WIFI);
-    static const lv_point_precise_t slash[] = {{10, 21}, {28, 5}};
-    s_wifi_slash = lv_line_create(bar);
+    lv_obj_t *entry = lv_button_create(bar);
+    lv_obj_remove_style_all(entry);
+    lv_obj_set_size(entry, 44, 44);
+    lv_obj_remove_flag(entry, static_cast<lv_obj_flag_t>(LV_OBJ_FLAG_SCROLLABLE |
+        LV_OBJ_FLAG_EVENT_BUBBLE | LV_OBJ_FLAG_GESTURE_BUBBLE));
+    lv_obj_add_event_cb(entry, [](lv_event_t *event) {
+        lv_event_stop_bubbling(event);
+        if (lv_event_get_code(event) == LV_EVENT_CLICKED) wifi_setup_ui_open();
+    }, LV_EVENT_ALL, nullptr);
+    s_wifi = label(entry, 10, LV_SYMBOL_WIFI);
+    static const lv_point_precise_t slash[] = {{10, 29}, {28, 13}};
+    s_wifi_slash = lv_line_create(entry);
     lv_line_set_points(s_wifi_slash, slash, 2);
     lv_obj_set_style_line_color(s_wifi_slash, lv_color_hex(MUTED), 0);
     lv_obj_set_style_line_width(s_wifi_slash, 2, 0);
@@ -97,4 +111,7 @@ void status_bar_create(lv_obj_t *screen, bool battery_available)
 
     refresh(nullptr);
     lv_timer_create(refresh, 1000, nullptr);
+    lv_timer_create([](lv_timer_t *) {
+        lv_obj_set_flag(s_bar, LV_OBJ_FLAG_HIDDEN, !home_controls_visible());
+    }, 100, nullptr);
 }

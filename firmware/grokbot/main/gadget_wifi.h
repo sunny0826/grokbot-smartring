@@ -15,6 +15,7 @@ struct GadgetWifiCred {
     char token[257];    // enroll token, 16-256 chars; sent in the LAN hello
     char host[128];     // gateway LAN address or NAME.local
     uint16_t port;      // LAN listener port (8767 default)
+    char remote_host[128]; // optional; empty selects the saved LAN endpoint
     char ca[3072];      // pinned CA, PEM, NUL-terminated
 };
 
@@ -24,7 +25,13 @@ bool gadget_wifi_load(GadgetWifiCred &out);   // true only when every field is p
 bool gadget_wifi_save(const GadgetWifiCred &cred);
 // Correct the network name without reading or replacing the saved credentials.
 bool gadget_wifi_set_ssid(const char *ssid);
+bool gadget_wifi_set_remote(const char *host);
+bool gadget_wifi_set_network(const char *ssid, const char *password);
+enum class GadgetNetworkSave { Saved, RolledBack, Uncertain };
+GadgetNetworkSave gadget_wifi_commit_network(const char *ssid, const char *password);
 void gadget_wifi_erase();
+const char *gadget_wifi_transport_error();
+void gadget_wifi_set_transport_error(const char *error);
 
 /* ---- transport lifecycle (gadget task only) ----
  * open() blocks through Wi-Fi join and the TLS handshake; on success the

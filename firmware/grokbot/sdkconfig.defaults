@@ -9,9 +9,10 @@ CONFIG_COMPILER_OPTIMIZATION_PERF=y
 CONFIG_FREERTOS_HZ=1000
 # Measured 16MB flash on this unit
 CONFIG_ESPTOOLPY_FLASHSIZE_16MB=y
-# Wi-Fi + mbedTLS pushed the image past 1 MB; the 16 MB flash has room for the
-# large single-app layout (~2 MB app partition).
-CONFIG_PARTITION_TABLE_SINGLE_APP_LARGE=y
+# Public CA bundle + WSS exceeds the original 1500K app partition.
+# Keep the verified on-device NVS and phy offsets, enlarge only factory.
+CONFIG_PARTITION_TABLE_CUSTOM=y
+CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions.csv"
 # Reserve internal RAM for display DMA and the Wi-Fi/TLS stack:
 # movable .bss goes to PSRAM, Wi-Fi static RX pool shrinks to 4 (the gadget
 # protocol is 200 ms polls of ≤2 KB frames — a small pool is plenty), and the
@@ -29,3 +30,16 @@ CONFIG_LWIP_IRAM_OPTIMIZATION=n
 CONFIG_ESP_CONSOLE_SECONDARY_NONE=y
 CONFIG_ESP_LVGL_ADAPTER_ENABLE_FPS_STATS=y
 CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ_240=y
+
+# Both LAN and public TLS validate certificate validity dates after SNTP.
+CONFIG_MBEDTLS_HAVE_TIME_DATE=y
+CONFIG_MBEDTLS_HAVE_TIME=y
+CONFIG_MBEDTLS_CERTIFICATE_BUNDLE=y
+CONFIG_MBEDTLS_CERTIFICATE_BUNDLE_DEFAULT_FULL=y
+CONFIG_WS_TRANSPORT=y
+# Required to suppress the IDF WS Upgrade-error log that contains auth headers.
+CONFIG_LOG_DYNAMIC_LEVEL_CONTROL=y
+
+# Nearby SSIDs can contain Chinese; setup labels use a larger generated subset.
+CONFIG_LV_FONT_SOURCE_HAN_SANS_SC_16_CJK=y
+CONFIG_LV_USE_QRCODE=y

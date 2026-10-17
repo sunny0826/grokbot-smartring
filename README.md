@@ -6,6 +6,8 @@ the ground with jelly squash-and-rebound; lay it flat and it cycles through idle
 animations (thinking dots / notification badge / orbiting rings). Tap the screen to
 poke it, swipe left/right to switch characters.
 
+[中文使用说明书](docs/grok-bot-user-guide.html) · [按住说话](docs/boot-voice.md) · [跨网使用](docs/remote-access.md) · [Deployment guide](docs/grok-bot-setup.md)
+
 The character and all animation constants are ported frame-by-frame from
 [bloub](https://github.com/jeremy-prt/bloub) (MIT) — radial-contour body,
 spherical-projection eyes, blink & gaze drift, measured easing curves. A second
@@ -16,6 +18,19 @@ tie, after `reference/character-ref-2.png`), does the same.
 
 ## Features
 
+- **Remote Wi-Fi access** — optional public WSS/HTTPS connects the screen to
+  the home Mac through the existing Cloudflare tunnel. The Mac stays awake;
+  Tap the screen's Wi-Fi icon to choose phone setup (temporary hotspot + local
+  web page) or enter the password on the round screen. USB is
+  used for initial endpoint configuration. [Setup](docs/remote-access.md).
+
+- **Hold-to-talk voice input** — tap the home screen to reveal controls, then
+  hold the on-screen button to record, release to
+  upload, or slide off to cancel. Audio reaches the Mac
+  for local transcription. A software mailbox uses the existing Grok OAuth MCP
+  connection to claim requests and return short Chinese replies to the screen.
+  Ask the Bot to process the mailbox; automatic wake-up is not implemented.
+  See [setup and current limits](docs/boot-voice.md).
 - **Gravity physics** — tilt to roll, circular boundary with restitution bounce,
   velocity-aligned jelly squash, gaze follows the downhill direction
 - **Idle carousel** — after 1.5 s lying flat: `idle → thinking → idle → happy → idle →
@@ -34,7 +49,9 @@ tie, after `reference/character-ref-2.png`), does the same.
   spherical gaze, blink schedule and idle carousel
 - **Upright head (pika, rowlet)** — the face counter-rotates against gravity so it always
   faces world-up while the body rolls downhill
-- **Status icons** — a top bar shows Wi-Fi association (green online, gray slash
+- **Status icons** — the top bar and talk button start hidden and reappear on a
+  home-screen tap; 10 seconds without touch hides them again. The top bar shows
+  Wi-Fi association (green online, gray slash
   offline), battery level and percentage, and a charging bolt. Updates once per
   second; low battery (20% or less) is red, unavailable readings show `--%`.
   The Wi-Fi icon indicates the access-point connection, not gateway availability.

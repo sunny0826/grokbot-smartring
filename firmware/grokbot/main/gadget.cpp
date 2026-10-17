@@ -18,6 +18,11 @@
 // collide).
 #include "gadget.h"
 #include "gadget_wifi.h"
+#include "gadget_endpoint.h"
+#include "gadget_clock.h"
+#include "voice.h"
+#include "wifi_setup.h"
+#include "wifi_setup_owner.h"
 
 #include <cstring>
 #include "cJSON.h"
@@ -31,7 +36,7 @@
 #include "freertos/queue.h"
 #include "freertos/task.h"
 
-#define FIRMWARE_VERSION "0.3.0-gadget-wifi"
+#define FIRMWARE_VERSION "0.9.1-tap-controls"
 
 static constexpr int RX_BUF = 4608;   // console lines may reach 4096; gateway frames 2048
 static constexpr int TX_BUF = 2208;
@@ -205,10 +210,12 @@ static bool send_frame(cJSON *root, char *buf, size_t cap)
     // cJSON_PrintPreallocated returns a BOOL, not the length.
     bool printed = cJSON_PrintPreallocated(root, buf, (int)cap - 2, false);
     cJSON_Delete(root);
-    if (!printed) return false;
+    if (!printed) { s_tp_dead = true; return false; }
     size_t len = strlen(buf);
     buf[len] = '\n';
-    return s_ops.write(buf, len + 1);
+    bool written = s_ops.write(buf, len + 1);
+    if (!written) s_tp_dead = true;
+    return written;
 }
 
 static bool send_hello(char *buf, size_t cap)
@@ -287,14 +294,52 @@ static bool send_event(const GadgetEvent &e, char *buf, size_t cap)
 
 static void console_reply(bool ok, const char *code, const char *message, bool include_wifi = false)
 {
-    char buf[512];
+    char buf[1024];
     cJSON *root = cJSON_CreateObject();
     cJSON_AddBoolToObject(root, "ok", ok);
     cJSON_AddStringToObject(root, "device_id", s_device_id);
     if (include_wifi) {
+        cJSON_AddStringToObject(root, "firmware", FIRMWARE_VERSION);
+        // NVS loader serializes with the owner commit; never read mutable s_cred here.
+        auto *saved = static_cast<GadgetWifiCred *>(heap_caps_calloc(1, sizeof(GadgetWifiCred), MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT));
+        if (saved && gadget_wifi_load(*saved)) {
+            cJSON_AddStringToObject(root, "transport", saved->remote_host[0] ? "wss" : "lan");
+            cJSON_AddStringToObject(root, "remote_host", saved->remote_host);
+            cJSON_AddStringToObject(root, "ssid", saved->ssid);
+        }
+        heap_caps_free(saved);
+        auto setup = wifi_setup_snapshot();
+        auto *wifi = cJSON_AddObjectToObject(root, "wifi_setup");
+        cJSON_AddNumberToObject(wifi, "phase", static_cast<int>(setup.phase));
+        cJSON_AddNumberToObject(wifi, "count", setup.count);
+        cJSON_AddNumberToObject(wifi, "error", static_cast<int>(setup.error));
+        cJSON_AddNumberToObject(wifi, "method", static_cast<int>(setup.method));
+        cJSON_AddNumberToObject(wifi, "phone_phase", static_cast<int>(setup.phone_phase));
+        cJSON_AddNumberToObject(wifi, "remaining_seconds", setup.remaining_seconds);
+        cJSON_AddBoolToObject(wifi, "command_pending", setup.command_pending);
+        cJSON_AddBoolToObject(root, "clock_ready", gadget_clock_ready());
+        cJSON_AddStringToObject(root, "transport_error", gadget_wifi_transport_error());
         cJSON_AddStringToObject(root, "link", s_wifi_mode
                                ? (gadget_wifi_link_up() ? "wifi" : "wifi-down") : "usb");
-        if (s_wifi_mode) cJSON_AddStringToObject(root, "ssid", s_cred.ssid);
+        cJSON *memory = cJSON_AddObjectToObject(root, "memory");
+        cJSON_AddNumberToObject(memory, "free_internal", heap_caps_get_free_size(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT));
+        cJSON_AddNumberToObject(memory, "min_internal", heap_caps_get_minimum_free_size(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT));
+        cJSON_AddNumberToObject(memory, "largest_internal", heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT));
+        auto voice = voice_snapshot();
+        cJSON *v = cJSON_AddObjectToObject(root, "voice");
+        cJSON_AddNumberToObject(v, "phase", static_cast<int>(voice.phase));
+        cJSON_AddNumberToObject(v, "duration_ms", voice.duration_ms);
+        cJSON_AddStringToObject(v, "error", voice.error);
+        cJSON_AddBoolToObject(v, "unread", voice.unread);
+        cJSON_AddNumberToObject(v, "page_index", voice.page_index);
+        cJSON_AddNumberToObject(v, "page_count", voice.page_count);
+        auto diagnostic = voice_diagnostics();
+        cJSON_AddBoolToObject(v, "boot_pressed", diagnostic.boot_pressed);
+        cJSON_AddNumberToObject(v, "boot_presses", diagnostic.presses);
+        cJSON_AddNumberToObject(v, "boot_queued", diagnostic.queued);
+        cJSON_AddNumberToObject(v, "boot_handled", diagnostic.handled);
+        cJSON_AddNumberToObject(v, "start_stage", diagnostic.start_stage);
+        cJSON_AddNumberToObject(v, "hold_id", voice.hold_id);
     }
     if (!ok) {
         cJSON *err = cJSON_AddObjectToObject(root, "error");
@@ -317,6 +362,28 @@ static void console_reply_restart()
     esp_restart();
 }
 
+class ConsoleMutation {
+public:
+    bool acquired = false;
+    ConsoleMutation()
+    {
+        if (!wifi_setup_usb_acquire()) return;
+        if (!voice_settings_pause(operation)) { wifi_setup_usb_release(); return; }
+        auto state = voice_snapshot();
+        if (state.phase != VoicePhase::Idle && state.phase != VoicePhase::Unavailable) {
+            voice_settings_resume(operation); wifi_setup_usb_release(); return;
+        }
+        int64_t deadline = esp_timer_get_time() / 1000 + 25000;
+        while (voice_settings_status(operation) == VoiceSettingsStatus::Pending && esp_timer_get_time() / 1000 < deadline)
+            vTaskDelay(pdMS_TO_TICKS(20));
+        acquired = voice_settings_status(operation) == VoiceSettingsStatus::Paused;
+        if (!acquired) { voice_settings_resume(operation); wifi_setup_usb_release(); }
+    }
+    ~ConsoleMutation() { if (acquired) { voice_settings_resume(operation); wifi_setup_usb_release(); } }
+private:
+    static constexpr uint32_t operation = UINT32_MAX;
+};
+
 // Returns true when the line was a console command (consumed).
 static bool console_handle(cJSON *root)
 {
@@ -326,6 +393,30 @@ static bool console_handle(cJSON *root)
 
     if (!strcmp(t, "status")) {
         console_reply(true, nullptr, nullptr, true);
+        return true;
+    }
+    bool mutation = !strcmp(t, "remote") || !strcmp(t, "wifi_network") || !strcmp(t, "wifi_ssid") ||
+                    !strcmp(t, "factory_reset") || !strcmp(t, "provision");
+    if (!mutation) return false;
+    ConsoleMutation guard;
+    if (!guard.acquired) {
+        console_reply(false, "busy", "network settings or voice activity in progress");
+        return true;
+    }
+    if (!strcmp(t, "remote")) {
+        const cJSON *host = cJSON_GetObjectItemCaseSensitive(root, "host");
+        if (!s_wifi_mode || !cJSON_IsString(host) || !gadget_wifi_set_remote(host->valuestring))
+            console_reply(false, "invalid_arguments", "requires saved settings and a DNS hostname, or empty host for LAN");
+        else console_reply_restart();
+        return true;
+    }
+    if (!strcmp(t, "wifi_network")) {
+        const cJSON *ssid = cJSON_GetObjectItemCaseSensitive(root, "ssid");
+        const cJSON *password = cJSON_GetObjectItemCaseSensitive(root, "password");
+        if (!s_wifi_mode || !cJSON_IsString(ssid) || !cJSON_IsString(password) ||
+            !gadget_wifi_set_network(ssid->valuestring, password->valuestring))
+            console_reply(false, "invalid_arguments", "requires saved settings, 1-32 byte SSID and empty or 8-64 byte password");
+        else console_reply_restart();
         return true;
     }
     if (!strcmp(t, "wifi_ssid")) {
@@ -363,6 +454,7 @@ static bool console_handle(cJSON *root)
                   str("password", c->pass, sizeof(c->pass)) &&
                   (c->pass[0] == 0 || strlen(c->pass) >= 8) &&
                   str("token", c->token, sizeof(c->token)) && strlen(c->token) >= 16 &&
+                  gadget_header_value_valid(c->token) &&
                   str("host", c->host, sizeof(c->host)) && c->host[0] &&
                   cJSON_IsNumber(port) && port->valuedouble >= 1 && port->valuedouble <= 65535 &&
                   str("ca", c->ca, sizeof(c->ca)) && strstr(c->ca, "BEGIN CERTIFICATE");
@@ -453,7 +545,7 @@ static cJSON *read_response(char *rx, size_t &rx_len, int64_t timeout_ms)
     int64_t deadline = esp_timer_get_time() / 1000 + timeout_ms;
     for (;;) {
         int64_t left = deadline - esp_timer_get_time() / 1000;
-        if (left <= 0 || s_tp_dead) return nullptr;
+        if (left <= 0 || s_tp_dead || wifi_setup_requested()) return nullptr;
         char *lf = rx_len ? (char *)memchr(rx, '\n', rx_len) : nullptr;
         if (lf) {
             *lf = 0;
@@ -462,7 +554,7 @@ static cJSON *read_response(char *rx, size_t &rx_len, int64_t timeout_ms)
             memmove(rx, rx + used, rx_len - used);
             rx_len -= used;
             if (resp) {
-                if (console_handle(resp)) {   // console line: not a session frame
+                if (!s_wifi_mode && console_handle(resp)) {   // console line: not a session frame
                     cJSON_Delete(resp);
                     continue;
                 }
@@ -497,16 +589,19 @@ static bool handle_response(cJSON *resp, bool &session, int64_t &last_response, 
     const cJSON *err = cJSON_GetObjectItemCaseSensitive(resp, "error");
     const cJSON *code = err ? cJSON_GetObjectItemCaseSensitive(err, "code") : nullptr;
     const char *c = cJSON_IsString(code) ? code->valuestring : "";
-    if (!strcmp(c, "unauthorized") || !strcmp(c, "revoked") || !strcmp(c, "stale_session"))
-        return false;            // rebuild the session
+    if (!strcmp(c, "unauthorized") || !strcmp(c, "revoked") || !strcmp(c, "stale_session")) {
+        if (s_wifi_mode) gadget_wifi_set_transport_error(!strcmp(c, "stale_session") ? "stale_session" : "device_unauthorized");
+        return false;
+    }
     last_response = now;         // late_ack / unknown_command / busy: session is alive
     return true;
 }
 
 // Run hello/poll/ack/event rounds until the session or the transport dies.
-static void session_loop(char *tx, char *rx)
+static bool session_loop(char *tx, char *rx)
 {
-    uint32_t backoff_ms = 1000;
+    bool answered = false;
+    const int response_ms = s_wifi_mode && s_cred.remote_host[0] ? 4000 : 2000;
     size_t rx_len = 0;
     bool session = false;
     int64_t last_poll = 0, last_state = 0;
@@ -514,32 +609,30 @@ static void session_loop(char *tx, char *rx)
 
     for (;;) {
         int64_t now = esp_timer_get_time() / 1000;
-        if (s_tp_dead) return;
+        if (s_tp_dead || wifi_setup_requested()) return answered;
 
         if (!session) {
             // The hello may go nowhere when no host is attached; only an ok
             // response opens the session. Wait synchronously so the response
             // is consumed before any retry — a second hello would replace the
             // session the first one just opened.
-            send_hello(tx, TX_BUF);
-            cJSON *resp = read_response(rx, rx_len, 2000);
+            if (!send_hello(tx, TX_BUF)) return answered;
+            cJSON *resp = read_response(rx, rx_len, response_ms);
             if (resp) {
                 bool ok = handle_response(resp, session, last_response, now);
                 cJSON_Delete(resp);
-                if (ok) {
-                    backoff_ms = 1000;
+                if (ok && session) {
+                    answered = true;
                     last_poll = last_state = now;
                     continue;
                 }
             }
-            if (s_tp_dead) return;
-            vTaskDelay(pdMS_TO_TICKS(backoff_ms));
-            backoff_ms = backoff_ms < 8000 ? backoff_ms * 2 : 8000;
-            continue;
+            if (s_wifi_mode && !s_tp_dead) gadget_wifi_set_transport_error(resp ? "hello_rejected" : "response_timeout");
+            return answered;
         }
 
         if (now - last_response > 12000) {
-            return;   // host detached, bridge died or TLS went silent: reopen
+            return answered;   // host detached, bridge died or TLS went silent: reopen
         }
 
         /* TX one frame per round-trip: acks and events first, then the state
@@ -563,12 +656,16 @@ static void session_loop(char *tx, char *rx)
         }
 
         if (sent) {
-            cJSON *resp = read_response(rx, rx_len, 1500);
+            cJSON *resp = read_response(rx, rx_len, response_ms);
             if (resp) {
                 if (!handle_response(resp, session, last_response, esp_timer_get_time() / 1000))
                     session = false;
                 cJSON_Delete(resp);
-            }   // timeout: the watchdog will rebuild the session
+                if (!session) return answered;
+            } else {
+                if (s_wifi_mode && !s_tp_dead) gadget_wifi_set_transport_error("response_timeout");
+                return answered;
+            }
         } else {
             vTaskDelay(pdMS_TO_TICKS(20));   // nothing due yet
         }
@@ -602,6 +699,13 @@ static void console_task(void *)
     }
 }
 
+static void reconnect_wait(uint32_t duration)
+{
+    int64_t until = esp_timer_get_time() / 1000 + duration;
+    while (!wifi_setup_requested() && esp_timer_get_time() / 1000 < until)
+        vTaskDelay(pdMS_TO_TICKS(20));
+}
+
 static void gadget_task(void *)
 {
     char *tx = (char *)heap_caps_malloc(TX_BUF, MALLOC_CAP_8BIT);
@@ -620,21 +724,25 @@ static void gadget_task(void *)
 
     uint32_t backoff_ms = 1000;
     for (;;) {
+        if (wifi_setup_requested()) {
+            gadget_wifi_transport_close();
+            if (wifi_setup_owner_step(s_cred)) { vTaskDelay(pdMS_TO_TICKS(20)); continue; }
+        }
         s_tp_dead = false;
         if (s_wifi_mode) {
             if (!gadget_wifi_transport_open(s_cred)) {
-                vTaskDelay(pdMS_TO_TICKS(backoff_ms));
-                backoff_ms = backoff_ms < 15000 ? backoff_ms * 2 : 15000;
+                reconnect_wait(backoff_ms + esp_random() % 251);
+                backoff_ms = backoff_ms < 8000 ? backoff_ms * 2 : 15000;
                 continue;
             }
-            backoff_ms = 1000;
             s_ops = {gadget_wifi_transport_write, tls_read};
         } else {
             s_ops = {usb_write, usb_read};
         }
-        session_loop(tx, rx);
+        if (session_loop(tx, rx)) backoff_ms = 1000;
         if (s_wifi_mode) gadget_wifi_transport_close();
-        vTaskDelay(pdMS_TO_TICKS(500));   // brief pause before re-hello/reopen
+        reconnect_wait(backoff_ms + esp_random() % 251);
+        backoff_ms = backoff_ms < 8000 ? backoff_ms * 2 : 15000;   // brief pause before re-hello/reopen
     }
 }
 

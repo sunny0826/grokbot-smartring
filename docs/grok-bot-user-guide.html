@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>GrokBot 圆屏 · 使用说明书</title>
+<style>
+:root{--paper:#f4f0e7;--ink:#242723;--muted:#687066;--green:#35674b;--line:#d7dace;--white:#fffef9}
+*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:17px/1.7 -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif}main{max-width:960px;margin:auto;padding:52px 28px 64px}a{color:var(--green);text-underline-offset:4px}p{margin:10px 0 18px}header{border-bottom:1px solid var(--line);padding-bottom:30px}.eyebrow{font-size:13px;letter-spacing:.12em;color:var(--green)}h1{font-size:clamp(32px,6vw,52px);line-height:1.2;letter-spacing:-.04em;margin:18px 0}h2{font-size:27px;line-height:1.3;margin:0 0 22px}h3{font-size:19px;margin:0 0 6px}.lead{font-size:20px;max-width:650px}.small{font-size:14px;color:var(--muted)}section{padding:36px 0;border-bottom:1px solid var(--line)}.flow{display:grid;grid-template-columns:1fr 36px 1fr 36px 1fr;align-items:center;text-align:center;margin:32px 0 22px}.node svg{width:88px;height:88px;display:block;margin:0 auto 12px}.node strong{font-size:20px;display:block}.node span{display:block;color:var(--muted);font-size:14px}.arrow{font-size:30px;color:var(--green)}.note{border-left:3px solid var(--green);padding:8px 18px;margin-top:22px;background:#e8ede2}.steps{list-style:none;padding:0;counter-reset:steps}.steps li{counter-increment:steps;display:grid;grid-template-columns:38px 1fr;gap:14px;margin:22px 0}.steps li:before{content:counter(steps);width:34px;height:34px;display:grid;place-items:center;background:var(--green);color:white;border-radius:50%;font-size:16px}.steps p{margin:0}.prompt{background:var(--white);border:1px solid var(--line);border-radius:12px;padding:20px;margin:18px 0}.prompt p{margin:0;white-space:pre-wrap}.copy{border:1px solid var(--green);border-radius:6px;padding:6px 12px;color:var(--green);background:transparent;cursor:pointer;font:inherit;font-size:13px;margin-top:14px}.copy:hover{background:#e8ede2}.copy:focus-visible,summary:focus-visible{outline:3px solid var(--green);outline-offset:4px}.command{display:grid;grid-template-columns:100px 1fr;gap:20px;padding:18px 0;border-bottom:1px solid var(--line)}.command:last-child{border:0}.command b{color:var(--green)}.command p{margin:0}.command code{font-size:13px;color:var(--muted)}.icons{display:grid;grid-template-columns:1fr 1fr;gap:28px}.icons svg{width:80px;height:38px;margin-bottom:8px}.cols{display:grid;grid-template-columns:1fr 1fr;gap:30px}.cols ul{padding-left:20px}.cols li{margin:8px 0}details{border-top:1px solid var(--line);padding:18px 0}summary{font-size:18px;font-weight:600;cursor:pointer}details p,details ol,details ul{font-size:16px}pre{font-size:13px;line-height:1.7;padding:16px;background:#e9e9e0;overflow:auto;border-radius:8px}code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;overflow-wrap:anywhere}.status{display:inline-block;color:var(--green);font-size:14px;background:#e4eadf;border-radius:30px;padding:5px 13px;margin-top:12px}footer{padding-top:24px;font-size:13px;color:var(--muted)}footer p{margin:8px 0}.sources{display:flex;flex-wrap:wrap;gap:8px 20px}
+@media(max-width:620px){main{padding:30px 20px}.flow{grid-template-columns:1fr 20px 1fr 20px 1fr}.node svg{width:58px;height:58px}.node strong{font-size:16px}.node span{font-size:12px}.arrow{font-size:20px}.icons,.cols{grid-template-columns:1fr;gap:16px}.command{grid-template-columns:70px 1fr;gap:14px}h2{font-size:24px}}
+@media print{body{background:white;font-size:12pt}main{padding:0;max-width:none}h1{font-size:30pt}section{padding:20px 0}.copy{display:none}details{break-inside:avoid}.prompt{break-inside:avoid}a{color:inherit}}
+</style>
+</head>
+<body>
+<main>
+<header>
+<div class="eyebrow">SMART RING PLUS / 日常使用说明</div>
+<h1>让圆屏跟着 Grok 动起来。</h1>
+<p class="lead">在 Grok Bot 里说一句话，就能换角色、播放动画、调亮度，或查看电量。</p>
+<div class="status">当前固件：Wi-Fi 控制已实测通过</div>
+<p class="small">说明书更新日期：2026-10-17 · 按住说话与真实 Grok 回复已验收；远程模式的手机热点实测待完成。这里的网络地址和设备 ID 均使用占位符。</p>
+</header>
+<section aria-labelledby="connection">
+<h2 id="connection">它们这样连接</h2>
+<div class="flow" aria-label="Grok Bot 经互联网连接 Mac 网关，圆屏通过局域网或公网连接 Mac">
+<div class="node"><svg viewBox="0 0 88 88" aria-hidden="true"><rect x="23" y="5" width="42" height="77" rx="10" fill="none" stroke="currentColor" stroke-width="3"/><path d="M36 12h16M39 73h10" stroke="currentColor" stroke-width="3" stroke-linecap="round"/><path d="M34 40l8 8 13-18" fill="none" stroke="#35674b" stroke-width="4"/></svg><strong>Grok Bot</strong><span>手机 / Mac 对话</span></div>
+<div class="arrow" aria-hidden="true">→</div>
+<div class="node"><svg viewBox="0 0 88 88" aria-hidden="true"><rect x="13" y="14" width="62" height="45" rx="5" fill="none" stroke="currentColor" stroke-width="3"/><path d="M13 59L5 71h78l-8-12M35 71h18" fill="none" stroke="currentColor" stroke-width="3"/><path d="M33 36h22M44 26v20" stroke="#35674b" stroke-width="3"/></svg><strong>你的 Mac</strong><span>网关 + 安全隧道</span></div>
+<div class="arrow" aria-hidden="true">→</div>
+<div class="node"><svg viewBox="0 0 88 88" aria-hidden="true"><circle cx="44" cy="44" r="39" fill="#ece7db" stroke="currentColor" stroke-width="3"/><circle cx="44" cy="47" r="24" fill="#242723"/><ellipse cx="36" cy="45" rx="4" ry="7" fill="#ece7db"/><ellipse cx="52" cy="45" rx="4" ry="7" fill="#ece7db"/><path d="M39 14q5-4 10 0" stroke="#35674b" stroke-width="2" fill="none"/></svg><strong>圆屏设备</strong><span>Wi-Fi 接收指令</span></div>
+</div>
+<p class="note"><strong>圆屏支持通过互联网连接家中的 Mac。</strong><br>轻点主页唤出控件 → 顶部 Wi-Fi 图标 → 手机配网 → 扫码加入临时热点 → 打开配网页输入密码。也可选「圆屏输入」。<br>远程模式通过 Cloudflare 传送控制和语音，Mac 需要保持唤醒并运行服务。换 Wi-Fi 不需要接电脑。<br>首次远程设置见<a href="remote-access.md">跨网使用</a>；手机热点实测仍待完成。</p>
+<p class="small">这条接入路径使用社区 grok-gadgets 网关。手机接入方式见<a href="https://github.com/adidshaft/grok-gadgets/blob/main/docs/getting-started/connect-grok-bot.md">项目接入指南</a>。</p>
+</section>
+<section aria-labelledby="start">
+<h2 id="start">日常使用，做这三步</h2>
+<ol class="steps">
+<li><div><h3>给设备供电，让 Mac 保持唤醒</h3><p>沿用当前供电方式。Mac 上的网关和 Cloudflare 隧道都需要运行；它们目前没有配置开机自启。</p></div></li>
+<li><div><h3>看看顶部 Wi-Fi 标志</h3><p>轻点主页可显示 Wi-Fi 和电量，10 秒无触摸后隐藏。绿色表示连上路由器。绿色本身不能证明 Grok 连接器和网关都正常。</p></div></li>
+<li><div><h3>打开已连接设备工具的 Grok Bot 对话</h3><p>先发下面这句话。要测试动画，先把设备平放在桌上。</p></div></li>
+</ol>
+<div class="prompt"><p id="first-prompt">请使用 grok-gadgets 工具列出设备，找到真实的 SmartRing-Plus 圆屏，忽略模拟灯。读取它的在线状态和电量，然后让它播放 happy 动画。请实际调用工具，并告诉我命令是否执行成功。</p><button class="copy" data-copy="first-prompt">复制这句话</button></div>
+<p class="small">看到工具返回 <code>executed</code>，再看屏幕是否动了。明显倾斜会打断开心、思考等轮播动画，恢复重力动作；动画也不会一直停留在同一表情。</p>
+</section>
+<section aria-labelledby="commands">
+<h2 id="commands">直接对 Grok 这样说</h2>
+<div class="command"><b>换角色</b><div><p>“把圆屏角色换成 rowlet。”</p><code>grokbot / pika / rowlet</code></div></div>
+<div class="command"><b>做表情</b><div><p>“让圆屏开心一下。”</p><code>thinking 思考 · happy 开心 · notify 提醒<br>orbit 环绕 · sleepy 困倦 · dizzy 眩晕</code></div></div>
+<div class="command"><b>调亮度</b><div><p>“把圆屏亮度调到 30%。”</p><code>0–100%；0% 会熄灭背光，设备仍在运行</code></div></div>
+<div class="command"><b>戳一下</b><div><p>“戳一下圆屏里的小家伙。”</p><code>poke：弹动、眨眼</code></div></div>
+<div class="command"><b>看状态</b><div><p>“圆屏还剩多少电？现在是什么角色？”</p><code>在线情况、电量、充电状态、亮度、角色、动画</code></div></div>
+<div class="command"><b>看互动</b><div><p>“读取圆屏最近的事件，看看我有没有摇过它。”</p><code>点击、摇晃、切换角色会进入网关事件记录</code></div></div>
+<p class="note">也可以在本次任务里要求：“完成后让圆屏播放 notify 提醒我。”<br>这需要 Grok 在任务结束时调用设备工具；目前没有配置长期自动提醒任务。</p>
+</section>
+<section aria-labelledby="screen">
+<h2 id="screen">屏幕上的两个标志</h2>
+<div class="icons">
+<div><svg viewBox="0 0 80 38" aria-hidden="true"><path d="M10 12Q30-4 50 12M18 21q12-10 24 0M25 29q5-5 10 0" fill="none" stroke="#35674b" stroke-width="4" stroke-linecap="round"/><circle cx="30" cy="35" r="2" fill="#35674b"/></svg><h3>Wi-Fi</h3><p>绿色：已连接路由器。<br>灰色斜杠：尚未连接或已断开。</p></div>
+<div><svg viewBox="0 0 80 38" aria-hidden="true"><rect x="2" y="8" width="45" height="23" rx="4" fill="none" stroke="#35674b" stroke-width="3"/><path d="M49 15v9" stroke="#35674b" stroke-width="4"/><rect x="7" y="13" width="34" height="13" rx="1" fill="#35674b"/><path d="M66 2l-9 19h8l-4 15 15-22h-10z" fill="#35674b"/></svg><h3>电池 + 百分比</h3><p>闪电：电源芯片报告外部供电 / 充电。<br>20% 及以下变红；<code>--%</code> 表示暂时没有有效读数。</p></div>
+</div>
+<p class="small">图标每秒检查一次状态。电量由板载电源模块提供。</p>
+</section>
+<section aria-labelledby="interaction">
+<h2 id="interaction">拿在手里，也能玩</h2>
+<div class="cols"><div><h3>本机动作</h3><ul><li>倾斜：角色沿重力方向滚动。</li><li>平放：自动轮播表情。</li><li>点屏幕：戳一下角色。</li><li>左右滑：切换角色。</li><li>摇一摇：触发眩晕。</li></ul></div><div><h3>和 Grok 的边界</h3><p>这些动作可以独立运行，不依赖 Grok。</p><p>事件上传到网关后，Grok 可以调用工具读取。<strong>目前没有“点屏幕就自动唤醒 Grok”的常驻触发器。</strong></p><p>语音信箱支持短文字回复回屏；尚未实现双向语音聊天或播放音乐。</p></div></div>
+</section>
+<section aria-labelledby="voice">
+<h2 id="voice">按住说话，松开发送</h2>
+<ol class="steps"><li><div><h3>按住屏幕按钮</h3><p>先轻点主页，再按住底部「按住说话」，看到「正在录音」后再说话。控件在 10 秒无触摸后自动隐藏。</p></div></li><li><div><h3>松开发送</h3><p>录音上传到 Mac，在本地转成文字。不想发送时，将手指滑出按钮即可取消。</p></div></li><li><div><h3>让 Bot 处理</h3><p>看到「等待 Grok 领取」后，在原 Bot 说「处理圆屏语音」。回复到达后可在圆屏打开、翻页和标记已读。</p></div></li></ol>
+<p class="note">最长录音 30 秒，松手才发送。快速点按不会发送。请使用屏幕入口，实体按钮长按可能关机。</p>
+<p class="small">语音信箱复用现有 MCP；录音不会自动唤醒 Bot。原局域网触摸录音与真实 Grok 回复已获用户验收；远程热点链路另行验证。详见<a href="boot-voice.md">语音使用与配置</a>。</p>
+</section>
+<section aria-labelledby="help">
+<h2 id="help">遇到问题，按现象找</h2>
+<details><summary>圆屏可以带出门吗？</summary><p>可以。远程域名设置好后，固件 0.9.0 可点 Wi-Fi 图标，用手机网页或圆屏输入密码，连接其他 2.4 GHz Wi-Fi。若要连接操作手机自己的热点，请用另一台手机打开网页，或使用圆屏输入。家中 Mac 需要持续联网、保持唤醒。</p><p>默认 LAN 模式仍要求同一局域网。切换方法见<a href="remote-access.md">跨网使用</a>，不需要重新设置 Grok 连接器。</p></details>
+<details><summary>Grok 找不到圆屏，或只有一个模拟灯</summary><p>让 Grok 先调用 <code>gadgets_list_devices</code>，选择具有 <code>character.set</code> 能力的真实 SmartRing-Plus，忽略模拟设备。若列表中没有圆屏，检查供电、Wi-Fi、Mac 网关。</p></details>
+<details><summary>Wi-Fi 是绿的，Grok 却控制不了</summary><p>Wi-Fi 绿灯只表示连上路由器。确认 Mac 没有睡眠，网关和隧道仍在运行，然后让 Grok 再读取一次设备状态。<code>401</code> 通常需要检查授权；隧道出现 <code>502</code> 时先检查 Mac 和网关。</p></details>
+<details><summary>Grok 说成功了，动画却看不出来</summary><p>把设备平放后再试。明显倾斜会切回重力动作。要求 Grok 报告工具返回的执行状态；若结果仍为 <code>pending</code>，让它继续查询 <code>gadgets_command_status</code>，不要直接把“已发送”当作“已执行”。</p></details>
+<details><summary>屏幕黑了，但设备还在线</summary><p>先说：“把圆屏背光调到 60%。”亮度设为 0% 会关闭背光。</p></details>
+<details><summary>Mac 重启后不能用了</summary><p>目前网关和隧道没有配置开机自启，需要重新启动。Wi-Fi 模式的网关必须带 <code>--lan-listen GATEWAY_LAN_IP:8767</code>；仅启动 USB 桥接不能恢复无线连接。</p><p>地址发生变化时，还要检查 LAN 证书和设备保存的网关地址。远程模式还需启动设备 relay 和语音服务。具体部署参数见<a href="remote-access.md">跨网使用</a>及<a href="grok-bot-setup.md">维护指南</a>。</p></details>
+<details><summary>首次连接，或需要重新授权 Grok Bot</summary><p>已经能调用设备工具时，跳过这里。否则在 Mac 端 Grok Bot 的一对一对话中发送以下内容，把示例域名替换为你已有的隧道域名：</p>
+<div class="prompt"><p id="connect-prompt">请添加一个自定义 MCP 服务器，名称 grok-gadgets，类型 Remote HTTPS，地址 https://gadget.example.com/mcp，使用 OAuth 登录，不手动填写请求头或令牌。</p><button class="copy" data-copy="connect-prompt">复制连接模板</button></div>
+<ol><li>确认 Grok 的添加服务器卡片，选择 Authorize / Continue。</li><li>在打开的授权页查看本次授权码。</li><li>在 Mac 的项目目录执行下面的命令，用页面上的码替换 <code>CODE</code>。</li></ol>
+<pre>env -u ALL_PROXY -u all_proxy -u HTTP_PROXY -u http_proxy \
+  -u HTTPS_PROXY -u https_proxy \
+  .venv-grok/bin/grok-gadgets-gateway oauth approve CODE</pre>
+<p>完成后让 Grok 列出设备。只批准自己刚打开的页面上的授权码。流程依据<a href="https://github.com/adidshaft/grok-gadgets/blob/main/docs/getting-started/connect-grok-bot.md">网关项目接入说明</a>；无需把密码或令牌发进聊天。</p></details>
+<details><summary>暂时停止 Grok 远程控制</summary><p>在项目目录执行；设备上的本机动画仍可运行：</p><pre>.venv-grok/bin/grok-gadgets-gateway remote off</pre><p>恢复时将 <code>off</code> 改为 <code>on</code>。</p></details>
+</section>
+<footer>
+<p>本次核对：真实设备在线，状态为 <code>link: wifi</code>，网关提供四项设备命令。此前无线 MCP 命令返回 <code>executed</code>。本说明书编写时仅查询状态，没有重新执行 Grok App 端测试，也没有完成独立电源测试。</p>
+<div class="sources"><a href="grok-bot-setup.md">部署维护指南</a><a href="../firmware/grokbot/main/gadget.cpp">固件指令定义</a><a href="../firmware/grokbot/main/main.cpp">动画与触摸行为</a><a href="../firmware/grokbot/main/status_bar.cpp">状态栏实现</a><a href="https://github.com/adidshaft/grok-gadgets-gateway">网关项目</a></div>
+<p>这是可离线打开的说明书，不会连接或控制设备。示意图不是设备截图。</p>
+</footer>
+</main>
+<script>
+document.querySelectorAll('[data-copy]').forEach(button=>{
+ button.addEventListener('click',async()=>{
+  const value=document.getElementById(button.dataset.copy).textContent;
+  try{await navigator.clipboard.writeText(value);button.textContent='已复制';}
+  catch{const range=document.createRange();range.selectNodeContents(document.getElementById(button.dataset.copy));const selection=window.getSelection();selection.removeAllRanges();selection.addRange(range);button.textContent='已选中，请复制';}
+ });
+});
+</script>
+</body>
+</html>

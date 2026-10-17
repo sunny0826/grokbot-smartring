@@ -46,3 +46,16 @@ credentials.json
 .cloudflared/
 *.log
 grok-gadgets-requests*.jsonl
+
+# Python caches and local runtimes
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+
+# Private recordings, databases and firmware/Flash backups
+*.wav
+*.sqlite3*
+*.bin
