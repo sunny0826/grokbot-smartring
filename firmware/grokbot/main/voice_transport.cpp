@@ -1,9 +1,11 @@
 #include "voice_transport.h"
 #include "voice_logic.h"
 #include "voice_http.h"
+#include "voice_timing.h"
 #include <algorithm>
 #include <cstdio>
 #include <cstring>
+#include <cstdlib>
 
 namespace {
 bool exclusion_header(const VoiceReadExclusions &excluded, char (&value)[528])
@@ -44,6 +46,11 @@ VoiceReply voice_exchange(VoiceRequest request, const char *request_id,
                          const int16_t *samples, size_t count,
                          const VoiceScope *scope, const VoiceReadExclusions *excluded)
 {
+    if (request == VoiceRequest::Response) {
+        VoiceResponse response = voice_response(request_id, VoicePhase::Idle, scope);
+        free(response.page);
+        return response.reply;
+    }
     VoiceReply result;
     strlcpy(result.error, "upload_unconfirmed", sizeof(result.error));
     char exclusions[528] = {};
@@ -71,6 +78,7 @@ VoiceReply voice_exchange(VoiceRequest request, const char *request_id,
         voice_wav_header(header, count);
         size_t bytes = request == VoiceRequest::Upload ? 44 + count * 2 : 0;
         bool ok = esp_http_client_open(client, bytes) == ESP_OK;
+        if (ok && request == VoiceRequest::Upload) voice_timing_mark(request_id, VoiceTimingStage::Connected);
         if (ok && bytes) ok = write_all(client, header, sizeof(header)) && write_all(client, samples, count * 2);
         if (ok) ok = esp_http_client_fetch_headers(client) >= 0;
         if (ok) {
@@ -90,5 +98,7 @@ VoiceReply voice_exchange(VoiceRequest request, const char *request_id,
             }
         }
     }
+    if (request == VoiceRequest::Upload && result.ok)
+        voice_timing_mark(request_id, VoiceTimingStage::UploadConfirmed);
     return result;
 }

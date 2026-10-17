@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>圆屏回复，还能快在哪里</title>
+<style>
+:root{font-family:system-ui,-apple-system,sans-serif;color:#eaf0f4;background:#101820}*{box-sizing:border-box}body{margin:0}main{max-width:1000px;margin:auto;padding:50px 24px}small,.muted{color:#a6b7c4}h1{font-size:clamp(30px,5vw,50px);line-height:1.2;max-width:850px;margin:16px 0}h2{font-size:25px;margin-top:44px}p{line-height:1.65}strong{color:#91e7cc}.number{font-size:64px;font-weight:750;color:#91e7cc}.bar{display:flex;height:64px;border-radius:8px;overflow:hidden;margin:24px 0}.bar span{min-width:3px;display:grid;place-items:center;color:#10202b;font-weight:650}.local{background:#91e7cc}.start{background:#f2c175}.answer{background:#9caef9}.legend{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}.legend b{font-size:28px;display:block;margin:8px 0}.flow{display:flex;align-items:center;gap:12px;margin:24px 0;flex-wrap:wrap}.node{border:1px solid #456173;border-radius:10px;padding:18px}.arrow{color:#91e7cc}.plans{display:grid;grid-template-columns:1fr 1fr;gap:20px}.plan{border-top:3px solid #91e7cc;padding:14px 0}.plan p{max-width:390px}a{color:#91e7cc}footer{border-top:1px solid #456173;margin-top:36px;padding-top:18px;font-size:14px}@media(max-width:650px){main{padding:28px 18px}.plans{grid-template-columns:1fr}.legend{gap:8px}.legend b{font-size:23px}.bar span{font-size:12px}.number{font-size:48px}}
+</style>
+<main>
+<small>2026-10-17 · 现有记录分析 · 优化尚未实施</small>
+<h1>主要等待在 Grok Bot<br>收到通知之后</h1>
+<div class="number">25.38 秒</div>
+<p>最新一条生产记录：音频存好 → 回复存好。<br><span class="muted">尚不包含此前上传，以及之后圆屏真正显示的时间。</span></p>
+<div class="bar" role="img" aria-label="本机转写及通知约2.03秒，通知后到领取12.99秒，领取后到回复10.32秒，排版存储约0.05秒">
+<span class="local" style="width:7.99%"></span><span class="start" style="width:51.19%">领取前</span><span class="answer" style="width:40.63%">领取后</span><span class="local" style="width:.19%"></span>
+</div>
+<div class="legend">
+<div>本机与通知<b>2.08 秒</b><small>含转写、通知往返、排版</small></div>
+<div>通知成功 → 领取<b>12.99 秒</b><small>云端内部尚未拆分</small></div>
+<div>领取 → 收到回复<b>10.32 秒</b><small>含模型、工具与网络等待</small></div>
+</div>
+<p class="muted">同一条 3.96 秒录音，服务端读取音频另花 1.88 秒。它不含 TLS 握手。以上为单条观测，不是性能提升证明。</p>
+<h2>两处值得继续优化</h2>
+<div class="plans">
+<article class="plan"><h3>让 Bot 一开始就看到问题</h3><p>通知携带转写；先保留领取机制做对照。纯问答合并提交可另作实验，需要解决执行权限隔离。</p><strong>争取减少云端准备或往返回合</strong><p class="muted">实际省时未知。仍使用原毛线。</p></article>
+<article class="plan"><h3>回复一好，屏幕就取到</h3><p>复用 HTTPS 连接；让设备等待状态变化，并随响应拿到首屏，减少空等和额外下载往返。</p><strong>去掉最多约 2 秒的定时空等</strong><p class="muted">TLS 和页面传输收益另测。</p></article>
+</div>
+<h2>建议推进顺序</h2>
+<div class="flow"><span class="node">测到真实上屏</span><span class="arrow">→</span><span class="node">优化连接与取页</span><span class="arrow">→</span><span class="node">提前传正文做对照</span></div>
+<p>首句必须是<strong>有效答案</strong>。“已收到”“正在处理”不算提速。涉及外部操作的请求保留领取、进度和结果核查。</p>
+<footer><a href="voice-latency-next.md">完整方案与取舍</a> · <a href="voice-next-evidence/summary.json">分段数据</a> · <a href="voice-next-evidence/recent-timings.json">原始计时</a><p class="muted">此前五次检查为 23.00–29.78 秒，中位 26.94 秒；另一次 36.89 秒。输入与环境不同，不能与最新记录作提速对照。</p></footer>
+</main>
+</html>

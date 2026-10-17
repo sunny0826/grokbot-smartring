@@ -4,6 +4,7 @@
 
 #include "voice.h"
 #include "voice_page.h"
+#include "voice_timing.h"
 #include "src/misc/cache/instance/lv_image_cache.h"
 #include <cstdlib>
 #ifdef ESP_PLATFORM
@@ -51,6 +52,63 @@ bool holding, hold_cancelled;
 lv_obj_t *page_image;
 lv_image_dsc_t page_descriptor;
 uint8_t *display_page;
+lv_display_t *timing_display;
+VoiceSnapshot loaded_page;
+bool page_loaded;
+uint32_t timing_frame;
+
+bool overlaps(lv_obj_t *object, const lv_area_t &page)
+{
+    if (!lv_obj_is_visible(object)) return false;
+    lv_area_t area;
+    lv_obj_get_coords(object, &area);
+    return area.x1 <= page.x2 && area.x2 >= page.x1 &&
+           area.y1 <= page.y2 && area.y2 >= page.y1;
+}
+
+bool layer_covers(lv_obj_t *layer, const lv_area_t &page)
+{
+    if (lv_obj_get_style_bg_opa(layer, LV_PART_MAIN) != LV_OPA_TRANSP &&
+        lv_obj_get_style_opa(layer, LV_PART_MAIN) != LV_OPA_TRANSP) return true;
+    for (uint32_t i = 0; i < lv_obj_get_child_count(layer); ++i)
+        if (overlaps(lv_obj_get_child(layer, i), page)) return true;
+    return false;
+}
+
+bool timing_page_visible(lv_area_t &area)
+{
+    if (!root || !page_loaded || was_covered || !lv_obj_is_visible(page_image)) return false;
+    const auto current = voice_snapshot();
+    if (current.phase != VoicePhase::ViewingReply || current.generation != loaded_page.generation ||
+        current.page_index != loaded_page.page_index || std::strcmp(current.request_id, loaded_page.request_id)) return false;
+    if (lv_display_get_screen_active(timing_display) != lv_obj_get_screen(root) ||
+        lv_display_get_screen_prev(timing_display)) return false;
+    lv_obj_get_coords(page_image, &area);
+    auto clipped = area;
+    if (!lv_obj_area_is_visible(page_image, &clipped) || clipped.x1 != area.x1 || clipped.x2 != area.x2 ||
+        clipped.y1 != area.y1 || clipped.y2 != area.y2 ||
+        lv_obj_get_style_image_opa(page_image, LV_PART_MAIN) != LV_OPA_COVER) return false;
+    for (auto *object = page_image; object; object = lv_obj_get_parent(object)) {
+        if (lv_obj_get_style_opa(object, LV_PART_MAIN) != LV_OPA_COVER) return false;
+        auto *parent = lv_obj_get_parent(object);
+        if (!parent) break;
+        for (int32_t i = lv_obj_get_index(object) + 1; i < int32_t(lv_obj_get_child_count(parent)); ++i)
+            if (overlaps(lv_obj_get_child(parent, i), area)) return false;
+    }
+    return !layer_covers(lv_display_get_layer_top(timing_display), area) &&
+           !layer_covers(lv_display_get_layer_sys(timing_display), area);
+}
+
+void timing_refresh(lv_event_t *)
+{
+    lv_area_t area{};
+    if (root) lv_obj_update_layout(root);
+    const bool visible = timing_page_visible(area);
+    timing_frame = voice_timing_frame_begin({loaded_page.request_id, loaded_page.generation,
+        loaded_page.page_index, {area.x1, area.y1, area.x2, area.y2}, visible});
+    // REFR_START precedes rendering: include a complete opaque page in this frame.
+    if (visible && voice_timing_needs_visible(loaded_page.request_id)) lv_obj_invalidate(page_image);
+}
 
 void isolate(lv_obj_t *obj)
 {
@@ -182,6 +240,7 @@ void set_button(Button &button, const char *text, VoiceAction action, int x)
 
 void show_phase(bool covered)
 {
+    page_loaded = false;
     lv_obj_add_flag(primary.obj, LV_OBJ_FLAG_HIDDEN);
     lv_obj_add_flag(secondary.obj, LV_OBJ_FLAG_HIDDEN);
     lv_obj_add_flag(previous.obj, LV_OBJ_FLAG_HIDDEN);
@@ -291,6 +350,8 @@ void show_phase(bool covered)
             page_descriptor.data_size = VOICE_PAGE_BYTES;
             page_descriptor.data = display_page;
             lv_image_set_src(page_image, &page_descriptor);
+            loaded_page = drawn;
+            page_loaded = true;
             lv_obj_remove_flag(page_image, LV_OBJ_FLAG_HIDDEN);
             if (!covered) voice_motion_reveal(page_image);
             else voice_motion_finish_reveal(page_image);
@@ -329,6 +390,15 @@ void show_phase(bool covered)
 
 } // namespace
 
+extern "C" void my_bot_display_flush_completed(void *display, int x1, int y1, int x2, int y2,
+                                                bool first, bool last, bool success, int64_t completed_us)
+{
+    if (display != timing_display) return;
+    lv_area_t area{};
+    voice_timing_frame_flush(timing_frame, {x1, y1, x2, y2}, first, last, success,
+                             timing_page_visible(area), completed_us);
+}
+
 VoicePresentation voice_ui_update(uint32_t now, bool covered)
 {
     if (!root) return {covered ? CharacterMode::Covered : CharacterMode::Home};
@@ -340,6 +410,8 @@ VoicePresentation voice_ui_update(uint32_t now, bool covered)
          drawn.phase == VoicePhase::Claimed);
     const bool changed = !initialized || drawn.phase != next.phase ||
                          drawn.generation != next.generation ||
+                         drawn.page_index != next.page_index ||
+                         std::strcmp(drawn.request_id, next.request_id) != 0 ||
                          drawn.hold_id != next.hold_id ||
                          std::strcmp(drawn.error, next.error) != 0;
     const bool time_changed = changed || drawn.duration_ms / 1000 != next.duration_ms / 1000;
@@ -387,6 +459,9 @@ void voice_ui_create(lv_obj_t *screen)
     lv_obj_add_flag(root, LV_OBJ_FLAG_HIDDEN);
     lv_obj_add_event_cb(root, swallow, LV_EVENT_ALL, nullptr);
     lv_obj_add_event_cb(root, [](lv_event_t *) {
+        lv_display_remove_event_cb_with_user_data(timing_display, timing_refresh, nullptr);
+        timing_display = nullptr;
+        page_loaded = false;
         voice_motion_reset();
         root = nullptr;
         if (talk.obj) lv_obj_delete(talk.obj);
@@ -420,6 +495,8 @@ void voice_ui_create(lv_obj_t *screen)
     page_image = lv_image_create(root);
     isolate(page_image);
     lv_obj_align(page_image, LV_ALIGN_TOP_MID, 0, 96);
+    timing_display = lv_obj_get_display(root);
+    lv_display_add_event_cb(timing_display, timing_refresh, LV_EVENT_REFR_START, nullptr);
     make_button(previous);
     make_button(primary);
     make_button(secondary);

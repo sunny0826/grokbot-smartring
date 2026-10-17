@@ -18,7 +18,8 @@ from urllib.parse import urlsplit
 import yaml
 
 CONTROL_PATH = r"^/v1/control$"
-VOICE_PATH = r"^/v1/(inbox|recordings/[0-9a-fA-F]{32}(/(retry|read)|/pages/[0-9]{1,3})?)$"
+LEGACY_VOICE_PATH = r"^/v1/(inbox|recordings/[0-9a-fA-F]{32}(/(retry|read)|/pages/[0-9]{1,3})?)$"
+VOICE_PATH = r"^/v1/(inbox|recordings/[0-9a-fA-F]{32}(/(retry|read|response)|/pages/[0-9]{1,3})?)$"
 
 
 def device_routes(config, hostname, voice_origin, ca_pool, relay_port=8770):
@@ -41,8 +42,10 @@ def device_routes(config, hostname, voice_origin, ca_pool, relay_port=8770):
         raise ValueError("Expected the original hostname route to http://127.0.0.1:8766")
     remaining = []
     for rule in ingress:
-        if rule.get("hostname") == hostname and rule.get("path") in (CONTROL_PATH, VOICE_PATH):
-            expected = next(item for item in additions if item["path"] == rule["path"])
+        if rule.get("hostname") == hostname and rule.get("path") in (CONTROL_PATH, VOICE_PATH, LEGACY_VOICE_PATH):
+            path = VOICE_PATH if rule["path"] == LEGACY_VOICE_PATH else rule["path"]
+            expected = dict(next(item for item in additions if item["path"] == path))
+            expected["path"] = rule["path"]
             if rule != expected:
                 raise ValueError("An existing device route differs; review it before replacing it")
         else:

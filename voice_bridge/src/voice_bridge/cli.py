@@ -40,13 +40,15 @@ def main():
     parser.add_argument("--max-jobs", type=int, default=1000)
     parser.add_argument("--max-bytes", type=int, default=512 * 1024 * 1024)
     parser.add_argument("--grok-trigger", type=Path, help="0600 JSON file for the original Bot's routine webhook")
+    parser.add_argument("--grok-trigger-transcript", action="store_true",
+                        help="experiment: include complete short transcripts in routine notifications")
     parser.add_argument("--configure-grok-trigger", type=Path,
                         help="privately prompt for the routine URL/key, save this file, and exit")
     parser.add_argument("--print-grok-routine", action="store_true", help="print the one-time Bot setup message")
     parser.add_argument("--activate-existing", action="store_true", help="also notify existing unclaimed ready recordings")
     parser.add_argument("--retry-activation", action="store_true", help="resume blocked notifications after fixing their cause")
     args = parser.parse_args()
-    if (args.activate_existing or args.retry_activation) and not args.grok_trigger:
+    if (args.activate_existing or args.retry_activation or args.grok_trigger_transcript) and not args.grok_trigger:
         parser.error("activation recovery requires --grok-trigger")
     if not DEVICE_ID.fullmatch(args.mailbox_id):
         parser.error("invalid mailbox ID")
@@ -104,7 +106,8 @@ def main():
         worker = Worker(store, transcriber)
         worker.start()
         if trigger:
-            notifier = Notifier(store, TriggerSender(trigger, args.mailbox_id))
+            notifier = Notifier(store, TriggerSender(trigger, args.mailbox_id,
+                                transcript_store=store if args.grok_trigger_transcript else None))
             notifier.start()
         print(f"Voice HTTPS receiver listening on port {args.port}; MCP mailbox connects via loopback {args.gateway_port}", flush=True)
         server.serve_forever(poll_interval=0.2)

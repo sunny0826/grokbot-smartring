@@ -5,6 +5,7 @@
 #include "gadget_clock.h"
 #include "esp_netif_sntp.h"
 #include "esp_wifi.h"
+#include "esp_event.h"
 #include <cassert>
 #include <cstdio>
 #include <cstring>
@@ -57,6 +58,13 @@ int esp_http_client_set_header(esp_http_client_handle_t, const char *key, const 
     if (!strcmp(key,"X-Device-ID")) device = value;
     return 0;
 }
+int64_t esp_timer_get_time() { return 1000000; }
+int esp_event_handler_register(esp_event_base_t, int32_t, esp_event_handler_t, void *) { return ESP_OK; }
+int esp_http_client_delete_header(esp_http_client_handle_t, const char *key) {
+    return headers.erase(key) ? ESP_OK : ESP_ERR_NOT_FOUND;
+}
+int esp_http_client_set_url(esp_http_client_handle_t, const char *value) { url = value; return ESP_OK; }
+int esp_http_client_set_method(esp_http_client_handle_t, esp_http_client_method_t method) { last_config.method = method; return ESP_OK; }
 int esp_http_client_cleanup(esp_http_client_handle_t) { ++cleanups; return 0; }
 static void header(const char *value)
 {
@@ -75,7 +83,7 @@ int esp_http_client_open(esp_http_client_handle_t, int bytes)
 }
 int esp_http_client_write(esp_http_client_handle_t, const char *, int size)
 { written += size; return size; }
-int esp_http_client_fetch_headers(esp_http_client_handle_t)
+int64_t esp_http_client_fetch_headers(esp_http_client_handle_t)
 { assert(written == expected_body); return 2; }
 int esp_http_client_get_status_code(esp_http_client_handle_t) { return 200; }
 int esp_http_client_read_response(esp_http_client_handle_t, char *body, int size)

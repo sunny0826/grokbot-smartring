@@ -27,6 +27,7 @@ def main():
     subprocess.run(["cmake", "-S", str(source), "-B", str(build), "-DCMAKE_BUILD_TYPE=Debug"], check=True)
     subprocess.run(["cmake", "--build", str(build), "--parallel", str(args.jobs)], check=True)
     scenarios = args.scenario or [
+        "timing-boot", "timing-storage", "response-page", "response-close", "response-settings", "response-close-race", "response-settings-race",
         "read-hold", "read-boot", "inbox-hold", "inbox-boot", "late-read", "stale-inbox",
         "scope-ready", "corrupt-start", "save-failure", "delete-failure", "multi-unread", "ui", "ui-save-failure",
         "restart-write", "restart-read", "restart-confirm", "restart-empty",

@@ -1,6 +1,79 @@
 #include "fixture.hpp"
+#include "voice_timing.h"
 namespace fixture {
 void run_actor_scenario(const std::string &name) {
+    if (name == "timing-boot" || name == "timing-storage") {
+        voice_start(); const auto hold = record(name == "timing-boot");
+        require(eventually([] { return voice_snapshot().duration_ms >= 400; }, 5000), "no captured audio");
+        const auto before = esp_timer_get_time();
+        if (name == "timing-boot") action(VoiceAction::Boot);
+        else { host::fail_commit = true; voice_hold_end(hold, VoiceHoldEnd::Send); }
+        const auto after = esp_timer_get_time();
+        if (name == "timing-storage") {
+            phase(VoicePhase::Ready); host::fail_commit = false; action(VoiceAction::Boot);
+        }
+        phase(VoicePhase::Stored);
+        VoiceTimingRecord records[VOICE_TIMING_CAPACITY];
+        require(voice_timing_snapshot(records, VOICE_TIMING_CAPACITY) == 1, "missing timing record");
+        if (name == "timing-boot") require(records[0].released_us == 0, "BOOT press fabricated a release");
+        else require(records[0].released_us >= before && records[0].released_us <= after,
+                     "storage retry lost original release");
+        require(records[0].at_us[static_cast<size_t>(VoiceTimingStage::UploadStarted)] > 0, "upload start not marked");
+        return;
+    }
+    if (name.rfind("response-", 0) == 0) {
+        block_response = true; response_ready = true;
+        voice_start(); const auto hold = record();
+        require(eventually([] { return voice_snapshot().duration_ms >= 400; }, 5000), "no captured audio");
+        voice_hold_end(hold, VoiceHoldEnd::Send); phase(VoicePhase::Stored);
+        require(eventually([] { return responses == 1; }), "response worker did not wait");
+        if (name == "response-close-race" || name == "response-settings-race") {
+            host::pause_actor = true;
+            require(eventually([] { return host::actor_paused.load(); }), "actor scheduling barrier not reached");
+            const auto completed = host::mailbox_results.load();
+            if (name == "response-close-race") action(VoiceAction::Close);
+            else require(voice_settings_pause(2), "settings rejected at scheduling barrier");
+            release_response();
+            require(eventually([&] { return host::mailbox_results > completed; }), "response result not queued");
+            host::pause_actor = false; host::network_cv.notify_all();
+            if (name == "response-close-race") {
+                phase(VoicePhase::Idle);
+                require(!voice_snapshot().unread, "queued Close lost to response");
+            } else {
+                require(eventually([] { return voice_settings_status(2) == VoiceSettingsStatus::Paused; }), "settings pause deadline");
+                require(voice_snapshot().phase == VoicePhase::Stored, "response shown behind settings");
+                response_ready = false; voice_settings_resume(2);
+                require(eventually([] { return responses >= 2; }), "response not retried after settings");
+            }
+        } else if (name == "response-page") {
+            release_response(); phase(VoicePhase::ViewingReply);
+            const auto snapshot = voice_snapshot();
+            require(uploaded_id() == snapshot.request_id && snapshot.page_count == 1, "first page lost request identity");
+            std::vector<uint8_t> bytes(VOICE_PAGE_BYTES);
+            require(voice_copy_page(snapshot.generation, bytes.data(), bytes.size()) && bytes.front() == 0xa8,
+                    "response first page not displayed");
+            require(page_downloads == 0, "response page downloaded twice");
+            require(reads == 0 && persisted().size() == 0, "response marked read automatically");
+        } else if (name == "response-close") {
+            const auto before = inboxes.load();
+            action(VoiceAction::Close);
+            require(eventually([] { return voice_snapshot().phase == VoicePhase::Idle; }, 250), "close blocked by response");
+            release_response();
+            require(eventually([&] { return inboxes > before; }), "stale response not drained");
+            require(voice_snapshot().phase == VoicePhase::Idle && !voice_snapshot().unread, "closed response resurrected");
+            require(!persisted().pending().id[0], "close retained pending");
+        } else if (name == "response-settings") {
+            require(voice_settings_pause(1), "settings request rejected");
+            require(voice_settings_status(1) == VoiceSettingsStatus::Pending, "settings ignored active response");
+            release_response();
+            require(eventually([] { return voice_settings_status(1) == VoiceSettingsStatus::Paused; }), "settings did not pause");
+            response_ready = false; voice_settings_resume(1);
+            require(eventually([] { return responses >= 2; }), "old response was not discarded after epoch change");
+            require(voice_snapshot().phase == VoicePhase::Stored, "pre-settings response changed phase");
+            require(invalidations > 0 && page_downloads == 0, "settings did not invalidate transport");
+        } else throw std::runtime_error("unknown response scenario");
+        return;
+    }
     if (name == "scope-ready") {
         voice_start(); record(true); host::fast_capture = true;
         require(eventually([] { return voice_snapshot().phase == VoicePhase::Ready; }, 5000), "capture did not reach limit");

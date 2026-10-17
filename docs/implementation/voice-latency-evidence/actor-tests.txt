@@ -1,0 +1,45 @@
+PASS response-page: real actor; reads=0 inboxes=0 commits=1 failed_commits=0
+all_host_tasks_joined=true
+PASS response-close: real actor; reads=0 inboxes=1 commits=2 failed_commits=0
+all_host_tasks_joined=true
+PASS response-settings: real actor; reads=0 inboxes=0 commits=1 failed_commits=0
+all_host_tasks_joined=true
+PASS response-close-race: real actor; reads=0 inboxes=1 commits=2 failed_commits=0
+all_host_tasks_joined=true
+PASS response-settings-race: real actor; reads=0 inboxes=0 commits=1 failed_commits=0
+all_host_tasks_joined=true
+PASS read-hold: real actor; reads=1 inboxes=1 commits=3 failed_commits=0
+all_host_tasks_joined=true
+PASS read-boot: real actor; reads=1 inboxes=1 commits=3 failed_commits=0
+all_host_tasks_joined=true
+PASS inbox-hold: real actor; reads=0 inboxes=1 commits=0 failed_commits=0
+all_host_tasks_joined=true
+PASS inbox-boot: real actor; reads=0 inboxes=1 commits=0 failed_commits=0
+all_host_tasks_joined=true
+PASS late-read: real actor; reads=1 inboxes=0 commits=4 failed_commits=0
+all_host_tasks_joined=true
+PASS stale-inbox: real actor; reads=0 inboxes=2 commits=0 failed_commits=0
+all_host_tasks_joined=true
+PASS scope-ready: real actor; reads=0 inboxes=0 commits=1 failed_commits=0
+all_host_tasks_joined=true
+PASS corrupt-start: real actor; reads=0 inboxes=0 commits=0 failed_commits=0
+all_host_tasks_joined=true
+PASS save-failure: real actor; reads=1 inboxes=0 commits=2 failed_commits=1
+all_host_tasks_joined=true
+PASS delete-failure: real actor; reads=2 inboxes=2 commits=3 failed_commits=1
+all_host_tasks_joined=true
+PASS multi-unread: real actor; reads=1 inboxes=2 commits=3 failed_commits=0
+all_host_tasks_joined=true
+PASS ui: real actor; reads=1 inboxes=0 commits=2 failed_commits=0
+all_host_tasks_joined=true
+PASS ui-save-failure: real actor; reads=1 inboxes=0 commits=2 failed_commits=1
+all_host_tasks_joined=true
+PASS restart-write: real actor; reads=1 inboxes=0 commits=2 failed_commits=0
+all_host_tasks_joined=true
+PASS restart-read: real actor; reads=1 inboxes=0 commits=0 failed_commits=0
+all_host_tasks_joined=true
+PASS restart-confirm: real actor; reads=1 inboxes=1 commits=1 failed_commits=0
+all_host_tasks_joined=true
+PASS restart-empty: real actor; reads=0 inboxes=1 commits=0 failed_commits=0
+all_host_tasks_joined=true
+PASS: 22 isolated processes; all host tasks joined

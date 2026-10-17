@@ -36,7 +36,7 @@
 #include "freertos/queue.h"
 #include "freertos/task.h"
 
-#define FIRMWARE_VERSION "0.13.0-async-read"
+#define FIRMWARE_VERSION "0.14.0-voice-latency"
 
 static constexpr int RX_BUF = 4608;   // console lines may reach 4096; gateway frames 2048
 static constexpr int TX_BUF = 2208;

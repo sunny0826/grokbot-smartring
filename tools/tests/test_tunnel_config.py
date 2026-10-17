@@ -1,6 +1,7 @@
 import importlib.util
 from pathlib import Path
 import unittest
+import re
 
 spec = importlib.util.spec_from_file_location("tunnel_config", Path(__file__).parents[1] / "configure_tunnel.py")
 module = importlib.util.module_from_spec(spec)
@@ -30,6 +31,18 @@ class TunnelRoutesTest(unittest.TestCase):
     def test_repeat_is_idempotent(self):
         first = self.update()
         self.assertEqual(self.update(first), first)
+
+    def test_response_route_and_legacy_migration(self):
+        old = self.update()
+        old["ingress"][1]["path"] = module.LEGACY_VOICE_PATH
+        updated = self.update(old)
+        self.assertEqual(updated, self.update())
+        self.assertEqual(self.update(updated), updated)
+        self.assertRegex("/v1/recordings/" + "a" * 32 + "/response", module.VOICE_PATH)
+        self.assertIsNone(re.fullmatch(module.VOICE_PATH, "/v1/recordings/" + "a" * 32 + "/response/extra"))
+        old["ingress"][1]["service"] = "https://192.168.1.10:9999"
+        with self.assertRaisesRegex(ValueError, "differs"):
+            self.update(old)
 
     def test_existing_different_device_route_requires_review(self):
         changed = self.update()

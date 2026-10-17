@@ -1,0 +1,32 @@
+{
+  "request_id": "d1280866210c30c23dd19de1b422676d",
+  "synthetic_audio": true,
+  "physical_release_measured": false,
+  "audio_seconds": 4.387208333333334,
+  "stages": [
+    {
+      "state": "stored",
+      "seconds": 1.1625767920049839
+    },
+    {
+      "state": "transcribing",
+      "seconds": 1.3704324170248583
+    },
+    {
+      "state": "ready",
+      "seconds": 2.393029208004009
+    },
+    {
+      "state": "claimed",
+      "seconds": 15.920936791982967
+    }
+  ],
+  "upload_confirmed_seconds": 1.1625767920049839,
+  "upload_start_to_first_page_seconds": 26.970161416975316,
+  "page_crc_valid": true,
+  "transcript": "这是一条连通性测试,请知回复测试成功。",
+  "reply": "测试成功。",
+  "notify_attempts": 1,
+  "synthetic_read_cleanup": true,
+  "passed": true
+}

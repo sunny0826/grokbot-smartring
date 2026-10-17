@@ -2,6 +2,9 @@
 #include "voice_scope.h"
 namespace fixture {
 std::atomic<unsigned> scope_version{1};
+std::atomic<unsigned> responses{0}, response_permits{0}, page_downloads{0}, invalidations{0};
+std::atomic<bool> block_response{false}, response_ready{false};
+void release_response() { ++response_permits; host::network_cv.notify_all(); }
 std::atomic<unsigned> reads{0}, inboxes{0}, read_permits{0}, inbox_permits{0}, last_exclusions{0};
 std::atomic<bool> block_read{true}, block_inbox{false}, read_success{true}, ignore_exclusions{false};
 namespace {
@@ -108,8 +111,27 @@ VoiceReply voice_exchange(VoiceRequest request, const char *id, const int16_t *,
 uint8_t *voice_download_page(const char *id, uint16_t index, uint16_t count, const VoiceScope *scope) {
     VoiceScope current; voice_current_scope(current);
     if (scope && *scope != current) return nullptr;
+    ++fixture::page_downloads;
     fixture::require(std::strlen(id) == 32 && index == 0 && count == 1, "unexpected page request");
     auto *page = static_cast<uint8_t *>(std::calloc(1, VOICE_PAGE_HEADER + VOICE_PAGE_BYTES));
     std::memset(page + VOICE_PAGE_HEADER, 0xa8, VOICE_PAGE_BYTES);
     return page;
+}
+
+void voice_http_invalidate() { ++fixture::invalidations; }
+VoiceResponse voice_response(const char *id, VoicePhase, const VoiceScope *scope) {
+    {
+        std::unique_lock lock(host::network_mutex);
+        const unsigned index = ++fixture::responses;
+        host::network_cv.wait(lock, [&] { return !fixture::block_response || fixture::response_permits >= index || host::stopping; });
+        host::check_stop();
+    }
+    VoiceResponse result;
+    result.reply = voice_exchange(VoiceRequest::Status, id, nullptr, 0, scope);
+    if (fixture::response_ready) {
+        result.reply.phase = VoicePhase::Replied; result.reply.page_count = 1;
+        result.page = static_cast<uint8_t *>(std::calloc(1, VOICE_PAGE_HEADER + VOICE_PAGE_BYTES));
+        std::memset(result.page + VOICE_PAGE_HEADER, 0xa8, VOICE_PAGE_BYTES);
+    }
+    return result;
 }

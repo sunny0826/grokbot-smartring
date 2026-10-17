@@ -168,6 +168,8 @@ typedef struct display_bridge_v9_hw_resource {
  *  STATIC VARIABLES
  **********************/
 static const char *TAG = "esp_lvgl:bridge_v9";
+extern void my_bot_display_flush_completed(void *display, int x1, int y1, int x2, int y2,
+    bool first, bool last, bool success, int64_t completed_us) __attribute__((weak));
 #ifdef MY_BOT_DISPLAY_BENCHMARK
 extern void my_bot_benchmark_flush(size_t bytes, int64_t began, int64_t ended,
     int64_t te_wait_us, bool te_timeout, bool first, bool last, bool success);
@@ -2388,6 +2390,10 @@ static void display_bridge_v9_flush_gpio_te(esp_lv_adapter_display_bridge_v9_t *
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "Draw bitmap failed: %s", esp_err_to_name(ret));
         impl->refresh_guard.failed = true;
+        if (my_bot_display_flush_completed) {
+            my_bot_display_flush_completed(disp, offsetx1, offsety1, offsetx2, offsety2,
+                te_first_chunk, te_last_chunk, false, esp_timer_get_time());
+        }
 #ifdef MY_BOT_DISPLAY_BENCHMARK
         my_bot_benchmark_flush(0, benchmark_began, esp_timer_get_time(), benchmark_te_wait,
             benchmark_te_timeout, te_first_chunk, te_last_chunk, false);
@@ -2401,6 +2407,10 @@ static void display_bridge_v9_flush_gpio_te(esp_lv_adapter_display_bridge_v9_t *
 
     /* Wait for transmission to complete */
     ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+    if (my_bot_display_flush_completed) {
+        my_bot_display_flush_completed(disp, offsetx1, offsety1, offsetx2, offsety2,
+            te_first_chunk, te_last_chunk, !impl->refresh_guard.failed, esp_timer_get_time());
+    }
     if (impl->cfg.te_ctx && te_last_chunk) {
         esp_lv_adapter_te_sync_record_tx_done(impl->cfg.te_ctx);
     }

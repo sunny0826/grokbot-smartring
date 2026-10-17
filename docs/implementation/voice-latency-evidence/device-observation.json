@@ -1,0 +1,43 @@
+{
+  "seconds": 240,
+  "status_samples": 114,
+  "firmware_versions": [
+    "0.14.0-voice-latency"
+  ],
+  "last_status": {
+    "firmware": "0.14.0-voice-latency",
+    "link": "wifi",
+    "transport": "wss",
+    "clock_ready": true,
+    "transport_error": "",
+    "voice": {
+      "phase": 0,
+      "duration_ms": 0,
+      "error": "",
+      "unread": false,
+      "page_index": 0,
+      "page_count": 0,
+      "boot_pressed": false,
+      "boot_presses": 0,
+      "boot_queued": 0,
+      "boot_handled": 0,
+      "start_stage": 0,
+      "hold_id": 0
+    },
+    "memory": {
+      "free_internal": 44359,
+      "min_internal": 31811,
+      "largest_internal": 23552
+    }
+  },
+  "all_wifi_connected": false,
+  "observed_display_errors": 0,
+  "timing_events": 0,
+  "minimum_internal_bytes": 31811,
+  "physical_recording_observed": false,
+  "transport_down_samples": 13,
+  "transport_down_runs": 2,
+  "transport_recovered_after_each_run": true,
+  "link_field_semantics": "WSS transport connectivity, not direct Wi-Fi association status",
+  "transport_interruption_root_cause": "not established"
+}

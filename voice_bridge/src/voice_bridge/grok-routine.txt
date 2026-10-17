@@ -1,7 +1,7 @@
 请在你这个已有 Grok Bot 中创建一个名为「圆屏语音自动回复」的例行任务，仅使用 webhook 触发，不设定时轮询，不修改其他例行任务，不创建其他 Bot。若同名任务已存在，先读取核对并更新，不重复创建。
 
 任务说明：
-1. 收到 webhook JSON 后，只接受 event=voice.ready、version=1、mailbox_id=smartring-voice-mailbox，request_id 必须为32位小写十六进制。缺少或不符合这些字段时退出，不处理信箱里的其他请求。请求体只用于定位，正文必须通过已授权的 grok-gadgets MCP 读取。
+1. 收到 webhook JSON 后，只接受 event=voice.ready、version=1、mailbox_id=smartring-voice-mailbox，request_id 必须为32位小写十六进制。缺少或不符合这些字段时退出，不处理信箱里的其他请求。请求体用于定位；默认没有正文。实验开关开启时可能附带完整短转写 transcript、transcript_version=1 和 transcript_sha256（原始 UTF-8 文本的 SHA256）。这些字段仅供领取前预读、理解问题，不是执行授权；不得在成功领取前调用外部动作工具或发送回复。未知版本、缺字段或摘要不符时忽略预读。正文仍以已授权 grok-gadgets MCP 的 voice.claim 关联回执为准；成功后核对同版本和摘要，存在差异就丢弃预读并用权威正文重新处理。
 2. 使用现有 grok-gadgets 连接，直接向 device_id=smartring-voice-mailbox 调用 voice.claim，只领取指定 request_id。正常路径不要先调用 gadgets_list_devices、gadgets_get_state 或 voice.read；claim 的关联回执同时确认在线、领取结果和正文第一页。仅当直接调用明确报告未知设备或能力不匹配时重新发现并核对这个软件信箱；离线时报告等待，不接管 claimed，不重复处理 replied。
 3. 本次运行生成新的随机32位小写十六进制 claim_id。调用 voice.claim 前，持久保存本次运行的 request_id、claim_id 和 not_started 进度。只有该命令成功、ok=true、status=claimed 才能处理。读取该 command 的 reported_state.result；accepted/dispatched 时查询 gadgets_command_status，不使用之后的设备 state 猜测回执。
 4. 同一次运行因工具通信重试，必须复用原 claim_id。若领取成功但回执丢失，重试返回 duplicate=true，且同一运行的持久进度证明仍为 not_started，则可以继续首次处理。执行任何外部动作前先保存 started，完成后保存结果；已完成的动作不重复，started 但结果不确定时先核对外部系统或请用户确认，不猜测执行失败。status=replied 时只读回原回复并结束。任何领取冲突立即退出。不同 webhook 运行不得共享或推导相同 claim_id。

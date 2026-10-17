@@ -13,8 +13,8 @@ add_library(lvgl STATIC ${LVGL_SOURCES})
 target_compile_definitions(lvgl PUBLIC LV_CONF_SKIP)
 target_include_directories(lvgl PUBLIC "${LVGL}")
 add_executable(actor main.cpp host.cpp fixture.cpp scenarios.cpp ui.cpp
-    "${MAIN}/voice.cpp" "${MAIN}/voice_mailbox.cpp" "${MAIN}/voice_journal.cpp"
-    "${MAIN}/voice_ui.cpp" "${MAIN}/voice_motion.cpp" "${MAIN}/home_controls.cpp"
+    "${MAIN}/voice_button.cpp" "${MAIN}/voice.cpp" "${MAIN}/voice_mailbox.cpp" "${MAIN}/voice_journal.cpp"
+    "${MAIN}/voice_timing.cpp" "${MAIN}/voice_ui.cpp" "${MAIN}/voice_motion.cpp" "${MAIN}/home_controls.cpp"
     "${MAIN}/fonts/voice_font_22.c")
 target_include_directories(actor PRIVATE include "${MAIN}")
 target_compile_options(actor PRIVATE -Wall -Wextra -Werror)

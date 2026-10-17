@@ -1,0 +1,63 @@
+{
+  "request_id": "d1280866210c30c23dd19de1b422676d",
+  "events": [
+    {
+      "stage": "upload_received",
+      "at_ns": 455390565986041,
+      "duration_ms": 526.493833
+    },
+    {
+      "stage": "stored",
+      "at_ns": 455390566513541,
+      "duration_ms": null
+    },
+    {
+      "stage": "transcribing",
+      "at_ns": 455390709266541,
+      "duration_ms": null
+    },
+    {
+      "stage": "ready",
+      "at_ns": 455391807063916,
+      "duration_ms": null
+    },
+    {
+      "stage": "notify_sending",
+      "at_ns": 455391916370000,
+      "duration_ms": null
+    },
+    {
+      "stage": "notify_accepted",
+      "at_ns": 455393261111208,
+      "duration_ms": null
+    },
+    {
+      "stage": "claimed",
+      "at_ns": 455405330520166,
+      "duration_ms": null
+    },
+    {
+      "stage": "reply_received",
+      "at_ns": 455415895265500,
+      "duration_ms": null
+    },
+    {
+      "stage": "rendered",
+      "at_ns": 455415938557666,
+      "duration_ms": 42.693209
+    },
+    {
+      "stage": "replied",
+      "at_ns": 455415939189333,
+      "duration_ms": null
+    },
+    {
+      "stage": "read",
+      "at_ns": 455416636535458,
+      "duration_ms": null
+    }
+  ],
+  "notify_to_claim_seconds": 12.069408958,
+  "claim_to_reply_seconds": 10.564745334,
+  "stored_to_replied_seconds": 25.372675792
+}

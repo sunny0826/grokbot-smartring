@@ -17,6 +17,7 @@ struct VoiceSnapshot {
     uint16_t page_count = 0;
     bool unread = false;
     uint32_t hold_id = 0;
+    char request_id[33] = {};
     char error[48] = {};
 };
 void voice_start();

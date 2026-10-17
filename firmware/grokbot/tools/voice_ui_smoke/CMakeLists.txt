@@ -15,7 +15,7 @@ add_library(lvgl STATIC ${LVGL_SOURCES})
 target_compile_definitions(lvgl PUBLIC LV_CONF_SKIP)
 target_include_directories(lvgl PUBLIC "${LVGL}")
 
-add_executable(smoke smoke.cpp "${MAIN}/home_controls.cpp" "${MAIN}/voice_ui.cpp" "${MAIN}/voice_motion.cpp" "${MAIN}/fonts/voice_font_22.c")
+add_executable(smoke smoke.cpp "${MAIN}/home_controls.cpp" "${MAIN}/voice_timing.cpp" "${MAIN}/voice_ui.cpp" "${MAIN}/voice_motion.cpp" "${MAIN}/fonts/voice_font_22.c")
 target_include_directories(smoke PRIVATE "${MAIN}")
 target_link_libraries(smoke PRIVATE lvgl)
 include(character_sources.cmake)

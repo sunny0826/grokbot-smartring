@@ -3,6 +3,7 @@
 #include "freertos/queue.h"
 #include "freertos/task.h"
 #include <algorithm>
+#include <cstdlib>
 
 namespace {
 QueueHandle_t requests;
@@ -15,7 +16,12 @@ void worker(void *)
     for (;;) {
         if (xQueueReceive(requests, &result.work, portMAX_DELAY) != pdTRUE) continue;
         const auto &work = result.work;
-        result.reply = voice_exchange(work.operation, work.request.id, nullptr, 0,
+        result.page = nullptr;
+        if (work.operation == VoiceRequest::Response) {
+            const auto response = voice_response(work.request.id, work.after, &work.request.scope);
+            result.reply = response.reply;
+            result.page = response.page;
+        } else result.reply = voice_exchange(work.operation, work.request.id, nullptr, 0,
             &work.request.scope, work.operation == VoiceRequest::Inbox ? &work.excluded : nullptr);
         finished();
         while (xQueueSend(results, &result, pdMS_TO_TICKS(50)) != pdTRUE) {}
@@ -42,11 +48,18 @@ bool voice_mailbox_receive(VoiceMailboxResult &result)
 }
 
 bool VoiceMailboxSync::receive(VoiceJournal &journal, const VoiceScope &scope,
-    VoicePhase phase, uint32_t generation, uint32_t epoch, int64_t now, char (&inbox_id)[33])
+    VoicePhase phase, uint32_t generation, uint32_t epoch, int64_t now, char (&inbox_id)[33],
+    VoiceMailboxResult *response)
 {
     VoiceMailboxResult result;
     if (!voice_mailbox_receive(result)) return false;
     const auto &work = result.work;
+    if (work.operation == VoiceRequest::Response) {
+        completed(result, now);
+        if (response) *response = result;
+        else free(result.page);
+        return false;
+    }
     if (work.operation == VoiceRequest::Read) {
         if (result.reply.ok && result.reply.read && !std::strcmp(result.reply.request_id, work.request.id) &&
             !journal.confirm_read(work.request)) result.reply.ok = false;
@@ -104,7 +117,7 @@ void VoiceMailboxSync::completed(const VoiceMailboxResult &result, int64_t now)
 {
     busy_ = false;
     if (result.work.operation == VoiceRequest::Inbox) next_inbox_ = now + 5000000;
-    else {
+    else if (result.work.operation == VoiceRequest::Read) {
         const bool confirmed = result.reply.ok && result.reply.read &&
                                !std::strcmp(result.reply.request_id, result.work.request.id);
         failures_ = confirmed ? 0 : std::min(failures_ + 1, 4u);

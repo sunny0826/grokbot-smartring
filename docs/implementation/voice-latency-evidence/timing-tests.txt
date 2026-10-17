@@ -1,0 +1,10 @@
+PASS timing core: coverage, all strip failures, stale frames, no release, once, bounded
+PASS real LVGL: normal, complete opaque page, once at final successful flush
+PASS real LVGL: covered, complete opaque page, once at final successful flush
+PASS real LVGL: overlay, complete opaque page, once at final successful flush
+PASS real LVGL: stale, complete opaque page, once at final successful flush
+PASS real LVGL: fail-first, complete opaque page, once at final successful flush
+PASS real LVGL: fail-middle, complete opaque page, once at final successful flush
+PASS real LVGL: fail-last, complete opaque page, once at final successful flush
+PASS real LVGL: boot has no fabricated release
+PASS: timing core and 8 real LVGL scenarios; artifacts /tmp/my-bot-latency-work/integrated-timing

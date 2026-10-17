@@ -2,7 +2,7 @@
 #include "voice.h"
 #include "voice_page.h"
 #include "voice_receipt.h"
-enum class VoiceRequest { Upload, Status, Retry, Inbox, Read };
+enum class VoiceRequest { Upload, Status, Retry, Inbox, Read, Response };
 struct VoiceReply {
     bool ok = false;
     VoicePhase phase = VoicePhase::UploadFailed;
@@ -17,3 +17,11 @@ VoiceReply voice_exchange(VoiceRequest request, const char *request_id,
                          const VoiceScope *scope = nullptr, const VoiceReadExclusions *excluded = nullptr);
 uint8_t *voice_download_page(const char *request_id, uint16_t index, uint16_t count,
                              const VoiceScope *scope = nullptr);
+
+struct VoiceResponse {
+    VoiceReply reply{};
+    uint8_t *page = nullptr;
+};
+VoiceResponse voice_response(const char *request_id, VoicePhase after, const VoiceScope *scope);
+
+void voice_http_invalidate();

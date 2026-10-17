@@ -6,18 +6,52 @@
 #include "esp_heap_caps.h"
 #include "esp_mac.h"
 #include "esp_wifi.h"
+#include "esp_event.h"
+#include "esp_timer.h"
+#include <mutex>
+#include <new>
 #include <cstdio>
 #include <cstring>
 #include <strings.h>
 
+namespace {
+std::mutex session_mutex;
+VoiceHttp *cached = nullptr;
+uint32_t session_epoch = 0;
+bool session_busy = false;
+bool watching_wifi = false;
+void disconnected(void *, esp_event_base_t, int32_t, void *) { voice_http_invalidate(); }
+bool remove_header(esp_http_client_handle_t client, const char *key) {
+    const auto result = esp_http_client_delete_header(client, key);
+    return result == ESP_OK || result == ESP_ERR_NOT_FOUND;
+}
+bool media_type(const char *value, const char *type) {
+    size_t n = strlen(type);
+    return !strncasecmp(value, type, n) && (value[n] == 0 || value[n] == ';' || value[n] == ' ');
+}
+}
+
 esp_err_t VoiceHttp::on_event(esp_http_client_event_t *event)
 {
-    if (event->event_id == HTTP_EVENT_ON_HEADER &&
-        !strcasecmp(event->header_key, "Content-Type")) {
-        auto *http = static_cast<VoiceHttp *>(event->user_data);
-        const char *value = event->header_value;
-        http->json_response = !strncasecmp(value, "application/json", 16) &&
-            (value[16] == 0 || value[16] == ';' || value[16] == ' ');
+    auto *http = static_cast<VoiceHttp *>(event->user_data);
+    if (event->event_id == HTTP_EVENT_DISCONNECTED) http->keep_alive = false;
+    if (event->event_id != HTTP_EVENT_ON_HEADER) return ESP_OK;
+    const char *key = event->header_key, *value = event->header_value;
+    if (!strcasecmp(key, "Content-Type")) {
+        http->metadata_valid &= ++http->content_type_headers == 1;
+        http->json_response = media_type(value, "application/json");
+        http->binary_response = media_type(value, "application/octet-stream");
+    } else if (!strcasecmp(key, "Connection")) {
+        http->metadata_valid &= ++http->connection_headers == 1;
+        http->keep_alive = !strcasecmp(value, "keep-alive");
+    } else if (!strcasecmp(key, "X-Voice-Request-ID")) {
+        ++http->request_id_headers;
+        if (strlen(value) != 32) http->metadata_valid = false;
+        else memcpy(http->response_id, value, 33);
+    } else if (!strcasecmp(key, "X-Voice-Read")) {
+        ++http->read_headers;
+        if (strcmp(value, "0") && strcmp(value, "1")) http->metadata_valid = false;
+        http->response_read = !strcmp(value, "1");
     }
     return ESP_OK;
 }
@@ -36,6 +70,13 @@ VoiceHttp::VoiceHttp(const char *path, esp_http_client_method_t method, int time
     if (expected_scope && !voice_scope_matches(*expected_scope, *credentials)) {
         error = "scope_mismatch"; return;
     }
+    configured = true;
+    initialize(path, method, timeout_ms, tx_buffer_size);
+}
+
+void VoiceHttp::initialize(const char *path, esp_http_client_method_t method,
+                           int timeout_ms, int tx_buffer_size)
+{
     const auto endpoint = gadget_endpoint(*credentials);
     char url[256], authorization[272], device[24];
     uint8_t mac[6];
@@ -68,10 +109,102 @@ VoiceHttp::VoiceHttp(const char *path, esp_http_client_method_t method, int time
         }
     }
     memset(authorization, 0, sizeof(authorization));
+    created_us = last_us = esp_timer_get_time();
+    requests = 0;
 }
 
 VoiceHttp::~VoiceHttp()
 {
-    if (client) esp_http_client_cleanup(client);
+    disconnect();
     if (credentials) { memset(credentials, 0, sizeof(*credentials)); free(credentials); }
+}
+
+void VoiceHttp::disconnect()
+{
+    if (client) esp_http_client_cleanup(client);
+    client = nullptr;
+    keep_alive = false;
+}
+
+bool VoiceHttp::matches(const VoiceScope *scope) const
+{
+    wifi_ap_record_t ap{};
+    if (!configured || !credentials || esp_wifi_sta_get_ap_info(&ap) != ESP_OK || !gadget_clock_ready()) return false;
+    auto *current = static_cast<GadgetWifiCred *>(heap_caps_calloc(1, sizeof(GadgetWifiCred), MALLOC_CAP_SPIRAM));
+    if (!current) return false;
+    const bool same = gadget_wifi_load(*current) && !memcmp(current, credentials, sizeof(*current)) &&
+        (!scope || voice_scope_matches(*scope, *current));
+    memset(current, 0, sizeof(*current));
+    free(current);
+    return same;
+}
+
+bool VoiceHttp::prepare(const char *path)
+{
+    const int64_t now = esp_timer_get_time();
+    if (now - last_us >= 2500000 || now - created_us >= 28000000 || requests >= 64) disconnect();
+    reused_connection = client && keep_alive;
+    json_response = binary_response = keep_alive = false;
+    metadata_valid = true;
+    request_id_headers = read_headers = content_type_headers = connection_headers = 0;
+    response_id[0] = 0;
+    response_read = false;
+    if (!configured) return false;
+    if (!client && credentials) initialize(path, HTTP_METHOD_GET, 8000, 1024);
+    if (!client) return false;
+    const auto endpoint = gadget_endpoint(*credentials);
+    char url[256];
+    snprintf(url, sizeof(url), "https://%s:%u%s", endpoint.host, endpoint.voice_port, path);
+    ++requests;
+    last_us = now;
+    return esp_http_client_set_url(client, url) == ESP_OK &&
+        esp_http_client_set_method(client, HTTP_METHOD_GET) == ESP_OK &&
+        remove_header(client, "Content-Type") &&
+        remove_header(client, "X-Voice-After") &&
+        remove_header(client, "X-Voice-Read-Exclude") &&
+        esp_http_client_set_header(client, "Connection", "keep-alive") == ESP_OK;
+}
+
+void voice_http_invalidate()
+{
+    VoiceHttp *old;
+    {
+        std::lock_guard<std::mutex> lock(session_mutex);
+        ++session_epoch;
+        old = cached;
+        cached = nullptr;
+    }
+    delete old;
+}
+
+VoiceHttpSession::VoiceHttpSession(const char *path, const VoiceScope *scope)
+{
+    {
+        std::lock_guard<std::mutex> lock(session_mutex);
+        if (session_busy) return;
+        if (!watching_wifi) {
+            if (esp_event_handler_register(WIFI_EVENT, WIFI_EVENT_STA_DISCONNECTED,
+                                           disconnected, nullptr) != ESP_OK) return;
+            watching_wifi = true;
+        }
+        session_busy = acquired = true;
+        epoch = session_epoch;
+        http = cached;
+        cached = nullptr;
+    }
+    if (http && !http->matches(scope)) { delete http; http = nullptr; }
+    if (!http) http = new (std::nothrow) VoiceHttp(path, HTTP_METHOD_GET, 8000, 1024, scope);
+    if (http && !http->prepare(path)) http->disconnect();
+}
+
+VoiceHttpSession::~VoiceHttpSession()
+{
+    if (!acquired) return;
+    if (http && (!accepted || !http->metadata_valid || !http->keep_alive)) http->disconnect();
+    {
+        std::lock_guard<std::mutex> lock(session_mutex);
+        if (epoch == session_epoch) { cached = http; http = nullptr; }
+        session_busy = false;
+    }
+    delete http;
 }

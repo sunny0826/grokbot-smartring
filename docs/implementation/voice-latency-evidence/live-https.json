@@ -1,0 +1,56 @@
+[
+  {
+    "route": "lan",
+    "request": 1,
+    "status": 200,
+    "bytes": 91408,
+    "crc_valid": true,
+    "same_socket": true,
+    "connection": "keep-alive"
+  },
+  {
+    "route": "lan",
+    "request": 2,
+    "status": 200,
+    "bytes": 91408,
+    "crc_valid": true,
+    "same_socket": true,
+    "connection": "keep-alive"
+  },
+  {
+    "route": "lan",
+    "request": 3,
+    "status": 200,
+    "bytes": 91408,
+    "crc_valid": true,
+    "same_socket": true,
+    "connection": "keep-alive"
+  },
+  {
+    "route": "public",
+    "request": 1,
+    "status": 200,
+    "bytes": 91408,
+    "crc_valid": true,
+    "same_socket": true,
+    "connection": "keep-alive"
+  },
+  {
+    "route": "public",
+    "request": 2,
+    "status": 200,
+    "bytes": 91408,
+    "crc_valid": true,
+    "same_socket": true,
+    "connection": "keep-alive"
+  },
+  {
+    "route": "public",
+    "request": 3,
+    "status": 200,
+    "bytes": 91408,
+    "crc_valid": true,
+    "same_socket": true,
+    "connection": "keep-alive"
+  }
+]

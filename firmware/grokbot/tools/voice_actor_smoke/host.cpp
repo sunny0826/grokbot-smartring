@@ -3,6 +3,7 @@
 #include <iomanip>
 namespace {
 std::mutex tasks_mutex;
+thread_local std::string task_name;
 std::vector<std::thread> tasks;
 std::vector<HostQueue *> queues;
 std::exception_ptr task_error;
@@ -21,7 +22,8 @@ void persist() {
 }
 namespace host {
 std::atomic<bool> stopping{false}, fail_commit{false}, fast_capture{false};
-std::atomic<unsigned> commits{0}, failed_commits{0};
+std::atomic<unsigned> commits{0}, failed_commits{0}, mailbox_results{0};
+std::atomic<bool> pause_actor{false}, actor_paused{false};
 void advance_ms(int64_t milliseconds) { time_offset += milliseconds * 1000; }
 std::mutex network_mutex;
 std::condition_variable network_cv;
@@ -58,6 +60,7 @@ int xQueueSend(QueueHandle_t queue, const void *value, TickType_t ticks) {
     if (queue->data.size() == queue->limit) return pdFALSE;
     const auto *bytes = static_cast<const uint8_t *>(value);
     queue->data.emplace_back(bytes, bytes + queue->item_size);
+    if (task_name == "voice_mailbox") ++host::mailbox_results;
     queue->cv.notify_all(); return pdTRUE;
 }
 int xQueueReceive(QueueHandle_t queue, void *value, TickType_t ticks) {
@@ -76,9 +79,10 @@ unsigned uxQueueMessagesWaiting(QueueHandle_t queue) {
 SemaphoreHandle_t xSemaphoreCreateMutex() { return new std::mutex; }
 int xSemaphoreTake(SemaphoreHandle_t mutex, TickType_t) { mutex->lock(); return pdTRUE; }
 int xSemaphoreGive(SemaphoreHandle_t mutex) { mutex->unlock(); return pdTRUE; }
-int xTaskCreate(void (*fn)(void *), const char *, unsigned, void *arg, unsigned, TaskHandle_t *) {
+int xTaskCreate(void (*fn)(void *), const char *name, unsigned, void *arg, unsigned, TaskHandle_t *) {
     std::lock_guard lock(tasks_mutex);
-    tasks.emplace_back([fn, arg] {
+    tasks.emplace_back([fn, arg, name = std::string(name)] {
+        task_name = name;
         try { fn(arg); throw std::runtime_error("FreeRTOS task returned"); } catch (const host::Stop &) {}
         catch (...) { std::lock_guard error_lock(tasks_mutex); task_error = std::current_exception(); }
     }); return pdPASS;
@@ -87,6 +91,11 @@ void vTaskDelete(TaskHandle_t handle) { assert(!handle); throw host::Stop{}; }
 void vTaskDelay(TickType_t ticks) {
     host::check_stop();
     std::unique_lock lock(host::network_mutex);
+    if (task_name == "voice" && ticks == 30 && host::pause_actor) {
+        host::actor_paused = true;
+        host::network_cv.wait(lock, [] { return !host::pause_actor || host::stopping; });
+        host::actor_paused = false;
+    }
     host::network_cv.wait_for(lock, std::chrono::milliseconds(ticks), [] { return host::stopping.load(); });
     host::check_stop();
 }

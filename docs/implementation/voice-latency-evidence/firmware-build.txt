@@ -1,0 +1,4 @@
+Bootloader binary size 0x5160 bytes. 0x2ea0 bytes (36%) free.
+Generated /Users/guoxudong/codes/my-bot/firmware/grokbot/build/grokbot.bin
+grokbot.bin binary size 0x1c7880 bytes. Smallest app partition is 0x200000 bytes. 0x38780 bytes (11%) free.
+Project build complete. To flash, run:

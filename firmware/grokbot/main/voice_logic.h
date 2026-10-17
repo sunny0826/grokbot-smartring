@@ -10,7 +10,7 @@ constexpr uint32_t VOICE_MAX_SECONDS = 30;
 constexpr size_t VOICE_MAX_SAMPLES = VOICE_RATE * VOICE_MAX_SECONDS;
 
 enum class VoiceHoldState { Idle, Holding, Send, Cancel };
-struct VoiceHoldRequest { uint32_t id = 0; VoiceHoldState state = VoiceHoldState::Idle; };
+struct VoiceHoldRequest { uint32_t id = 0; VoiceHoldState state = VoiceHoldState::Idle; int64_t released_us = 0; };
 class VoiceHoldControl {
 public:
     uint32_t begin(bool idle) {
@@ -19,9 +19,11 @@ public:
         request_ = {next_id_, VoiceHoldState::Holding};
         return next_id_;
     }
-    void finish(uint32_t id, VoiceHoldEnd outcome) {
-        if (id && request_.id == id && request_.state == VoiceHoldState::Holding)
+    void finish(uint32_t id, VoiceHoldEnd outcome, int64_t released_us = 0) {
+        if (id && request_.id == id && request_.state == VoiceHoldState::Holding) {
+            request_.released_us = released_us;
             request_.state = outcome == VoiceHoldEnd::Send ? VoiceHoldState::Send : VoiceHoldState::Cancel;
+        }
     }
     VoiceHoldRequest snapshot() const { return request_; }
     void clear(uint32_t id) { if (request_.id == id) request_ = {}; }
@@ -122,4 +124,9 @@ inline void voice_wav_header(uint8_t *header, size_t samples)
     le(34, 16, 2);
     memcpy(header + 36, "data", 4);
     le(40, samples * 2, 4);
+}
+
+inline bool voice_waiting(VoicePhase phase) {
+    return phase == VoicePhase::Stored || phase == VoicePhase::Transcribing ||
+           phase == VoicePhase::Waiting || phase == VoicePhase::Claimed;
 }

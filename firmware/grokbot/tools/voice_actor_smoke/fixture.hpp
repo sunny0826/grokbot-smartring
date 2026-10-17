@@ -10,6 +10,9 @@ namespace fixture {
 inline constexpr char A[] = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 inline constexpr char B[] = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
 inline const VoiceScope scope{1};
+extern std::atomic<unsigned> responses, response_permits, page_downloads, invalidations;
+extern std::atomic<bool> block_response, response_ready;
+void release_response();
 extern std::atomic<unsigned> reads, inboxes, read_permits, inbox_permits;
 extern std::atomic<bool> block_read, block_inbox, read_success, ignore_exclusions;
 extern std::atomic<unsigned> last_exclusions, scope_version;

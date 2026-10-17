@@ -1,4 +1,5 @@
 """Durable recording and mailbox state, owned by one local process."""
+from contextlib import contextmanager
 import fcntl
 import hashlib
 import json
@@ -15,7 +16,8 @@ from .timing import JobTimings
 ID = re.compile(r"[0-9a-f]{32}")
 METADATA = """request_id,device_id,digest,status,transcript,error,retryable,
     claim_id,claim_result,reply,reply_result,read,page_count,
-    notify_state,notify_error,notify_attempts,notify_next_at,notify_last_at"""
+    notify_state,notify_error,notify_attempts,notify_next_at,notify_last_at,
+    transcript_sha256,transcript_version"""
 
 
 class RequestError(Exception):
@@ -38,6 +40,9 @@ class Store:
             self.lockfile.close()
             raise ValueError("storage_already_in_use") from None
         self.lock = threading.RLock()
+        self.changed = threading.Condition(self.lock)
+        self.response_waiters = set()
+        self.responses_closed = False
         self.activation_enabled = False
         self.activation_error = None
         self.max_jobs, self.max_bytes, self.renderer = max_jobs, max_bytes, renderer
@@ -52,7 +57,9 @@ class Store:
             transcript TEXT, error TEXT, retryable INTEGER NOT NULL DEFAULT 0)""")
         columns = {row[1] for row in self.db.execute("PRAGMA table_info(jobs)")}
         with self.db:
-            for name, definition in {"claim_id": "TEXT", "claim_result": "TEXT", "reply": "TEXT",
+            for name, definition in {"transcript_sha256": "TEXT",
+                                     "transcript_version": "INTEGER",
+                                     "claim_id": "TEXT", "claim_result": "TEXT", "reply": "TEXT",
                                      "reply_result": "TEXT", "read": "INTEGER NOT NULL DEFAULT 0",
                                      "page_count": "INTEGER NOT NULL DEFAULT 0",
                                      "notify_state": "TEXT", "notify_error": "TEXT",
@@ -69,6 +76,11 @@ class Store:
                 id INTEGER PRIMARY KEY CHECK(id=1), paused_error TEXT,
                 not_before REAL NOT NULL DEFAULT 0)""")
             self.db.execute("INSERT OR IGNORE INTO activation_control(id) VALUES(1)")
+            legacy = self.db.execute("""SELECT request_id,transcript FROM jobs
+                WHERE transcript IS NOT NULL AND transcript_sha256 IS NULL""").fetchall()
+            for row in legacy:
+                self.db.execute("UPDATE jobs SET transcript_sha256=?,transcript_version=1 WHERE request_id=?",
+                                (hashlib.sha256(row["transcript"].encode("utf-8")).hexdigest(), row["request_id"]))
             self.timings = JobTimings(self.db)
             self.db.execute("UPDATE jobs SET status='stored' WHERE status='transcribing'")
             self.db.execute("""UPDATE jobs SET status='ready',error=NULL,retryable=0
@@ -76,9 +88,62 @@ class Store:
             self.db.execute("""UPDATE jobs SET status='needs_review',error='legacy_delivery_needs_review',retryable=0
                 WHERE status IN ('submitted','dispatching','unconfirmed','needs_configuration')""")
 
+    @contextmanager
+    def transaction(self):
+        with self.changed:
+            before = self.db.total_changes
+            with self.db:
+                yield
+            if self.db.total_changes != before:
+                self.changed.notify_all()
+
+    def stop_responses(self):
+        with self.changed:
+            self.responses_closed = True
+            self.changed.notify_all()
+
     def close(self):
-        self.db.close()
-        self.lockfile.close()
+        self.stop_responses()
+        with self.lock:
+            self.db.close()
+            self.lockfile.close()
+
+    def response(self, request_id, device_id, after=None):
+        if after is not None and after not in ("stored", "transcribing", "ready", "claimed"):
+            raise RequestError(400, "invalid_voice_after")
+        with self.changed:
+            if self.responses_closed:
+                raise RequestError(503, "service_unavailable")
+            row = self._owned(request_id, device_id)
+            if (after == row["status"]
+                    and len(self.response_waiters) < 4 and device_id not in self.response_waiters):
+                self.response_waiters.add(device_id)
+                try:
+                    deadline = time.monotonic() + 1
+                    while not self.responses_closed and row["status"] == after:
+                        remaining = deadline - time.monotonic()
+                        if remaining <= 0:
+                            break
+                        self.changed.wait(remaining)
+                        if not self.responses_closed:
+                            row = self._owned(request_id, device_id)
+                finally:
+                    self.response_waiters.remove(device_id)
+            if self.responses_closed:
+                raise RequestError(503, "service_unavailable")
+            if row["status"] == "replied":
+                return self.page(request_id, device_id, 0), {
+                    "X-Voice-Request-ID": request_id, "X-Voice-Read": str(int(row["read"]))}
+            return self.public(row), {}
+
+    def trigger_transcript(self, request_id):
+        with self.lock:
+            row = self._row(request_id)
+            text = row["transcript"]
+            if text is None or len(text) > 800 or len(text.encode("utf-8")) > 3200:
+                return {}
+            return {"transcript": text, "transcript_sha256": row["transcript_sha256"],
+                    "transcript_version": row["transcript_version"]}
 
     @staticmethod
     def public(row):
@@ -120,7 +185,7 @@ class Store:
     def put(self, request_id, device_id, audio, *, upload_ms=None):
         self._id(request_id)
         digest = hashlib.sha256(audio).hexdigest()
-        with self.lock, self.db:
+        with self.transaction():
             row = self.db.execute(f"SELECT {METADATA} FROM jobs WHERE request_id=?", (request_id,)).fetchone()
             if row:
                 if row["device_id"] != device_id or row["digest"] != digest:
@@ -137,7 +202,7 @@ class Store:
             return 201, self.public(self._row(request_id))
 
     def retry(self, request_id, device_id):
-        with self.lock, self.db:
+        with self.transaction():
             row = self._owned(request_id, device_id)
             if not (row["status"] == "failed" and row["retryable"]):
                 raise RequestError(409, "retry_not_allowed")
@@ -147,7 +212,7 @@ class Store:
             return self.public(self._row(request_id))
 
     def claim(self):
-        with self.lock, self.db:
+        with self.transaction():
             row = self.db.execute("SELECT * FROM jobs WHERE status='stored' ORDER BY rowid LIMIT 1").fetchone()
             if row:
                 self.db.execute("UPDATE jobs SET status='transcribing' WHERE request_id=?", (row["request_id"],))
@@ -155,7 +220,14 @@ class Store:
             return dict(row) if row else None
 
     def update(self, request_id, status, *, transcript=None, error=None, retryable=False):
-        with self.lock, self.db:
+        with self.transaction():
+            row = self._row(request_id)
+            if transcript is not None:
+                if row["transcript"] is not None and row["transcript"] != transcript:
+                    raise RequestError(409, "transcript_conflict")
+                digest = hashlib.sha256(transcript.encode("utf-8")).hexdigest()
+                self.db.execute("UPDATE jobs SET transcript_sha256=?,transcript_version=1 WHERE request_id=?",
+                                (digest, request_id))
             self.db.execute("""UPDATE jobs SET status=?, transcript=COALESCE(?,transcript),
                 error=?,retryable=? WHERE request_id=?""",
                 (status, transcript, error, int(retryable), request_id))
@@ -165,7 +237,7 @@ class Store:
                     notify_attempts=0,notify_next_at=0 WHERE request_id=?""", (request_id,))
 
     def enable_activation(self, *, include_existing=False, retry_blocked=False):
-        with self.lock, self.db:
+        with self.transaction():
             self.activation_enabled = True
             self.activation_error = self.db.execute(
                 "SELECT paused_error FROM activation_control WHERE id=1").fetchone()[0]
@@ -181,7 +253,7 @@ class Store:
                     notify_attempts=0,notify_next_at=0 WHERE status='ready' AND notify_state='blocked'""")
 
     def reserve_notification(self, now, *, max_attempts=6, minimum_interval=15):
-        with self.lock, self.db:
+        with self.transaction():
             if not self.activation_enabled or self.activation_error:
                 return None
             if now < self.db.execute("SELECT not_before FROM activation_control WHERE id=1").fetchone()[0]:
@@ -206,7 +278,7 @@ class Store:
             return {"request_id": row["request_id"], "attempt": attempt}
 
     def finish_notification(self, request_id, attempt, state, next_at, error=None, *, pause=False):
-        with self.lock, self.db:
+        with self.transaction():
             self.timings.record(request_id, "notify_" + state, attempt=attempt)
             if pause:
                 self.activation_error = error
@@ -246,7 +318,9 @@ class Store:
         end = min(offset + 800, len(text))
         return {"request_id": row["request_id"], "device_id": row["device_id"], "status": row["status"],
                 "transcript": text[offset:end], "offset": offset,
-                "next_offset": end if end < len(text) else None}
+                "next_offset": end if end < len(text) else None,
+                "transcript_sha256": row["transcript_sha256"],
+                "transcript_version": row["transcript_version"]}
 
     @staticmethod
     def _reply_state(row):
@@ -262,11 +336,13 @@ class Store:
 
     def claim_request(self, request_id, claim_id):
         self._id(claim_id)
-        with self.lock, self.db:
+        with self.transaction():
             row = self._row(request_id)
             if row["claim_id"] == claim_id:
                 return {**json.loads(row["claim_result"]), "status": row["status"],
-                        "duplicate": True, **self._reply_state(row)}
+                        "duplicate": True, **self._reply_state(row),
+                        "transcript_sha256": row["transcript_sha256"],
+                        "transcript_version": row["transcript_version"]}
             if row["status"] != "ready":
                 raise RequestError(409, "claim_conflict")
             if self.db.execute("SELECT 1 FROM jobs WHERE claim_id=?", (claim_id,)).fetchone():
@@ -283,7 +359,7 @@ class Store:
         if (not isinstance(text, str) or not text.strip() or len(text) > 128
                 or any(unicodedata.category(c) in ('Cc', 'Cs') and c != '\n' for c in text)):
             raise RequestError(400, "invalid_reply_text")
-        with self.lock, self.db:
+        with self.transaction():
             row = self._row(request_id)
             if row["claim_id"] != claim_id:
                 raise RequestError(409, "claim_conflict")
@@ -338,7 +414,7 @@ class Store:
                                          (request_id, index)).fetchone()[0])
 
     def mark_read(self, request_id, device_id):
-        with self.lock, self.db:
+        with self.transaction():
             row = self._owned(request_id, device_id)
             if row["status"] != "replied":
                 raise RequestError(409, "reply_not_available")

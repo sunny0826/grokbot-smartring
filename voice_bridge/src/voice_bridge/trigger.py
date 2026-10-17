@@ -88,17 +88,20 @@ def retry_after(value):
 
 
 class TriggerSender:
-    def __init__(self, config, mailbox_id, *, context=None):
+    def __init__(self, config, mailbox_id, *, context=None, transcript_store=None):
         self.config, self.mailbox_id = config, mailbox_id
+        self.transcript_store = transcript_store
         self.context = context or ssl.create_default_context()
 
     def __call__(self, request_id):
         target = urlsplit(self.config.url)
         connection = http.client.HTTPSConnection(target.hostname, target.port or 443,
                                                  context=self.context, timeout=10)
-        body = json.dumps({"event": "voice.ready", "version": 1,
-                           "request_id": request_id, "mailbox_id": self.mailbox_id},
-                          separators=(",", ":")).encode()
+        payload = {"event": "voice.ready", "version": 1,
+                   "request_id": request_id, "mailbox_id": self.mailbox_id}
+        if self.transcript_store is not None:
+            payload.update(self.transcript_store.trigger_transcript(request_id))
+        body = json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
         try:
             connection.request("POST", target.path, body, {
                 "Authorization": "Bearer " + self.config.key,

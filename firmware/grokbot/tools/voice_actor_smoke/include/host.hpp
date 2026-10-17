@@ -40,7 +40,8 @@ namespace host {
 struct Stop {};
 extern std::atomic<bool> stopping;
 extern std::atomic<bool> fail_commit, fast_capture;
-extern std::atomic<unsigned> commits, failed_commits;
+extern std::atomic<unsigned> commits, failed_commits, mailbox_results;
+extern std::atomic<bool> pause_actor, actor_paused;
 void advance_ms(int64_t milliseconds);
 extern std::mutex network_mutex;
 extern std::condition_variable network_cv;

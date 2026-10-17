@@ -1,0 +1,5 @@
+PASS timing-boot: real actor; reads=0 inboxes=0 commits=1 failed_commits=0
+all_host_tasks_joined=true
+PASS timing-storage: real actor; reads=0 inboxes=0 commits=1 failed_commits=1
+all_host_tasks_joined=true
+PASS: 2 isolated processes; all host tasks joined
